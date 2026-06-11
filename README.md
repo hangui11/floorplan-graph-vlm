@@ -16,7 +16,7 @@ Extracts structured topological graphs from floor plan images using **Qwen3-VL-8
                               needs review? ◀─────────┤
                                    │                  │
                                    ▼                  │
-                            [5] RLHF (human hints) ───┤
+                    [5] Human-in-the-loop review (hints) ───┤
                                                       │
                                                       ▼
                                          [6] Stack 2D → 3D (N floors)
@@ -43,7 +43,7 @@ TFM/
 │   ├── step2_aggregation.py               # Step 2 — extract 2D graph
 │   ├── step3_apartment_details.py         # Step 3 — enrich apartments
 │   ├── step4_validate.py                  # Step 4 — automated validation
-│   ├── step5_rlhf.py                      # Step 5 — human feedback loop
+│   ├── step5_human_review.py             # Step 5 — human-in-the-loop refinement
 │   ├── step6_stack3d.py                   # Step 6 — 2D → 3D stacking
 │   ├── pipeline.py                        # End-to-end orchestrator
 │   └── utils/
@@ -53,7 +53,7 @@ TFM/
 │   ├── classify_image.txt
 │   ├── analyze_aggregation.txt
 │   ├── apartment_details.txt
-│   └── rlhf_relearn_connector.txt
+│   └── human_review_connector.txt
 ├── outputs/
 │   ├── graphs/              # 2D + 3D JSON graphs
 │   ├── visualizations/      # Side-by-side PNGs (2D) + 3D PNGs
@@ -84,7 +84,7 @@ python -m src.pipeline
 python -m src.pipeline --dataset IBAVI --limit 5
 
 # After a run, fix the plans that couldn't find stairs/elevators (Step 5)
-python -m src.pipeline --rlhf
+python -m src.pipeline --review
 ```
 
 **CLI flags:**
@@ -98,7 +98,7 @@ python -m src.pipeline --rlhf
 | `--no-validate` | Skip Step 4 (automated validation) |
 | `--no-stack` | Skip Step 6 (3D stacking) |
 | `--n-floors N` | Number of floors for 3D stacking (default: 3) |
-| `--rlhf` | Run the interactive Step 5 only |
+| `--review` | Run the interactive Step 5 only (human-in-the-loop refinement) |
 | `--model-path PATH` | Override the model path |
 
 ---
@@ -149,19 +149,19 @@ Runs six checks per graph:
 
 Each graph gets a `passed` flag, a `needs_human_review` flag (true when connectors are missing or unreachable), and a `score` (fraction of checks passed). Results: `outputs/stats/validation_summary.json`, `outputs/logs/validation_reports.json`, `outputs/logs/needs_human_review.json`.
 
-### Step 5 — RLHF Human Feedback (`step5_rlhf.py`)
+### Step 5 — Human-in-the-Loop Refinement (`step5_human_review.py`)
 
 Interactive session for the subset of plans flagged by Step 4 (missing stairs/elevators or unreachable apartments). The CLI:
 
 1. Lists each flagged plan with its current state and reasons.
 2. Asks the human for a hint about the connector location (e.g. *"central core between apartments"*, *"labeled ESC on the right"*, *"single-floor house, no connector expected"*).
-3. Re-prompts the VLM with the hint baked into [prompts/rlhf_relearn_connector.txt](prompts/rlhf_relearn_connector.txt), which reminds the model what stair/elevator symbols look like.
+3. Re-prompts the VLM with the hint baked into [prompts/human_review_connector.txt](prompts/human_review_connector.txt), which reminds the model what stair/elevator symbols look like.
 4. Overwrites the graph with the corrected version (preserving apartment interior details from Step 3).
 5. Persists the hint to `outputs/logs/human_feedback_memory.json` so future runs can prepend accumulated feedback.
 
 Trigger with:
 ```bash
-python -m src.pipeline --rlhf
+python -m src.pipeline --review
 ```
 
 ### Step 6 — 2D → 3D Stacking (`step6_stack3d.py`)
@@ -242,7 +242,7 @@ Output: `outputs/graphs/{name}_3d.json`, plus a 3D scatter-plot visualization in
 | [prompts/classify_image.txt](prompts/classify_image.txt) | Step 1 | Classify as `aggregation` or `individual` |
 | [prompts/analyze_aggregation.txt](prompts/analyze_aggregation.txt) | Step 2 | Extract apartments + stairs/elevators + edges |
 | [prompts/apartment_details.txt](prompts/apartment_details.txt) | Step 3 | Count rooms inside a specific apartment |
-| [prompts/rlhf_relearn_connector.txt](prompts/rlhf_relearn_connector.txt) | Step 5 | Re-extract graph with human hints about connectors |
+| [prompts/human_review_connector.txt](prompts/human_review_connector.txt) | Step 5 | Re-extract graph with human hints about connectors |
 
 ---
 

@@ -346,7 +346,7 @@ This emulates the chain-of-thought paradigm without requiring the model to verba
 \subsection{Visual In-Context Examples}
 \label{sec:visual-icl}
 
-For tasks where visual judgement is decisive, the prompt is augmented with one or two reference images and their expected outputs. Step~1 receives two reference plans (one per class) with concise textual captions identifying their category. Step~2 receives a single canonical aggregation plan paired with its expected JSON output, teaching the model both the visual pattern and the response schema simultaneously. Step~5 receives zero, one, two, or three image crops loaded from a persistent directory of human-confirmed examples (see Section~\ref{sec:rlhf}).
+For tasks where visual judgement is decisive, the prompt is augmented with one or two reference images and their expected outputs. Step~1 receives two reference plans (one per class) with concise textual captions identifying their category. Step~2 receives a single canonical aggregation plan paired with its expected JSON output, teaching the model both the visual pattern and the response schema simultaneously. Step~5 receives zero, one, two, or three image crops loaded from a persistent directory of human-confirmed examples (see Section~\ref{sec:human-review}).
 
 To avoid circular reference, the wrapper skips an example whenever the target image is the example itself.
 
@@ -378,13 +378,13 @@ The structured outputs of Steps~2 and~3 are merged into a 2D graph $G = (V, E)$ 
 Failed checks are stored as \code{flags} inside the graph JSON, preserving the original output for human review rather than discarding it --- the \textit{diagnostic perservation} principle of Section~\ref{sec:principles}.
 
 \section{Human-in-the-Loop Refinement}
-\label{sec:rlhf}
+\label{sec:human-review}
 
 Even with careful prompting, the model occasionally fails to detect elements that an architect would identify immediately, particularly stair cores and elevator shafts drawn in unusual styles. Step~5 provides an interactive command-line tool that lets the architect inject two forms of feedback.
 
 \paragraph{Textual hint.} A free-text description of the missed element (\eg, \textit{``a staircase is present in the central core but was not detected''}) is interpolated into a re-extraction prompt that asks the model to re-examine the image with this knowledge.
 
-\paragraph{Reference image crop.} The architect may additionally supply a cropped image of the missed element (\eg, the staircase symbol used throughout the dataset). The crop is copied to a persistent directory \code{outputs/rlhf\_examples/} organised by element type (staircase or elevator). On every subsequent VLM invocation, up to three crops per type are re-loaded and prepended as few-shot visual references. This persists the correction across sessions without any model fine-tuning.
+\paragraph{Reference image crop.} The architect may additionally supply a cropped image of the missed element (\eg, the staircase symbol used throughout the dataset). The crop is copied to a persistent directory \code{outputs/human\_review\_examples/} organised by element type (staircase or elevator). On every subsequent VLM invocation, up to three crops per type are re-loaded and prepended as few-shot visual references. This persists the correction across sessions without any model fine-tuning.
 
 This design treats human feedback as a form of long-term visual memory: once an architect has annotated one staircase, the model is far more likely to recognise similar staircases across the rest of the dataset.
 
@@ -472,7 +472,7 @@ The codebase is organised around the six pipeline steps, with a thin orchestrati
     \item \code{prompts/*.txt} --- prompt templates kept outside the code so that they can be edited without re-deploying the pipeline.
 \end{itemize}
 
-Outputs are written to a stable directory layout (\code{outputs/graphs}, \code{outputs/visualizations}, \code{outputs/logs}, \code{outputs/stats}, \code{outputs/rlhf\_examples}), enabling incremental processing: re-runs only regenerate missing artefacts.
+Outputs are written to a stable directory layout (\code{outputs/graphs}, \code{outputs/visualizations}, \code{outputs/logs}, \code{outputs/stats}, \code{outputs/human\_review\_examples}), enabling incremental processing: re-runs only regenerate missing artefacts.
 
 \section{Reproducibility}
 

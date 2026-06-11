@@ -1,18 +1,18 @@
 """
-Step 5: Reinforcement Learning with Human Feedback (RLHF-style).
+Step 5: Human-in-the-loop refinement.
 
 For graphs flagged as needing human review (typically: missing staircase
 or elevator — no connection component between apartments), this step:
 
 1. Lists the flagged plans to the user.
 2. Accepts human-provided hints about where/what the connector looks like.
-3. Sends a re-learning prompt to the VLM with the hints baked in.
+3. Sends a re-extraction prompt to the VLM with the hints baked in.
 4. Replaces the graph with the corrected version.
 
-This is a lightweight RLHF-style loop: the "reward signal" is the human
-hint, and the model adapts its output in a single corrective step.
-For persistent learning across runs, the hints are stored in a feedback
-memory file and prepended to all future re-learn prompts.
+This is a lightweight human-in-the-loop refinement: the human hint guides
+the model, and it adapts its output in a single corrective step.
+For persistent refinement across runs, the hints are stored in a feedback
+memory file and prepended to all future re-extraction prompts.
 """
 import json
 import logging
@@ -28,7 +28,7 @@ from src.utils.json_parser import extract_json
 logger = logging.getLogger(__name__)
 
 FEEDBACK_MEMORY_FILE = LOGS_DIR / "human_feedback_memory.json"
-EXAMPLES_DIR = OUTPUT_DIR / "rlhf_examples"
+EXAMPLES_DIR = OUTPUT_DIR / "human_review_examples"
 MAX_EXAMPLES_PER_TYPE = 3  # cap to keep VLM context manageable
 
 
@@ -61,8 +61,8 @@ def add_feedback(source_file: str, hint: str, memory: list[dict] | None = None) 
 
 def save_example_image(src_path: Path, element_type: str) -> Path | None:
     """
-    Copy a user-provided reference image into outputs/rlhf_examples/{type}/
-    so it is available as few-shot context for every future re-learn call.
+    Copy a user-provided reference image into outputs/human_review_examples/{type}/
+    so it is available as few-shot context for every future re-extraction call.
 
     Args:
         src_path: Path to the user's reference image (a crop or full image).
@@ -111,13 +111,13 @@ def load_examples(max_per_type: int = MAX_EXAMPLES_PER_TYPE) -> list[tuple[Path,
     return examples
 
 
-# ── Re-learn with feedback ─────────────────────────────────────────────────────
+# ── Re-extract with feedback ────────────────────────────────────────────────────
 
-def load_relearn_prompt() -> str:
-    return (PROMPTS_DIR / "rlhf_relearn_connector.txt").read_text(encoding="utf-8")
+def load_reextract_prompt() -> str:
+    return (PROMPTS_DIR / "human_review_connector.txt").read_text(encoding="utf-8")
 
 
-def relearn_graph(
+def reextract_graph(
     client: VLMClient,
     image_path: Path,
     graph: dict,
@@ -134,12 +134,12 @@ def relearn_graph(
         graph: The current (flagged) graph.
         hints: List of human-written hint strings.
         use_examples: If True, prepend accumulated stair/elevator examples
-            from outputs/rlhf_examples/ as few-shot context.
+            from outputs/human_review_examples/ as few-shot context.
 
     Returns:
         A new graph dict (replacement), or None on failure.
     """
-    prompt_template = load_relearn_prompt()
+    prompt_template = load_reextract_prompt()
     hints_text = "\n".join(f"- {h}" for h in hints) if hints else "- (no hints provided)"
     prompt = prompt_template.replace("{human_hints}", hints_text)
 
@@ -151,11 +151,11 @@ def relearn_graph(
     result = extract_json(response)
 
     if result is None:
-        logger.error(f"Re-learn failed: could not parse JSON for {image_path.name}")
+        logger.error(f"Re-extraction failed: could not parse JSON for {image_path.name}")
         return None
 
     if "nodes" not in result or "edges" not in result:
-        logger.error(f"Re-learn failed: missing nodes/edges for {image_path.name}")
+        logger.error(f"Re-extraction failed: missing nodes/edges for {image_path.name}")
         return None
 
     # Normalize the new output
@@ -181,8 +181,8 @@ def relearn_graph(
         if node["type"] == "apartment" and node.get("label") in old_details_by_label:
             node["details"] = old_details_by_label[node["label"]]
 
-    # Record that this graph went through RLHF
-    new_graph["rlhf"] = {
+    # Record that this graph went through human-in-the-loop refinement
+    new_graph["human_review"] = {
         "applied": True,
         "hints_used": hints,
         "no_connector_confirmed": bool(result.get("no_connector_confirmed", False)),
@@ -260,7 +260,7 @@ def print_review_report(items: list[dict]):
 
 # ── Interactive session ────────────────────────────────────────────────────────
 
-def run_interactive_rlhf(
+def run_interactive_human_review(
     client: VLMClient,
     visualize: bool = True,
 ):
@@ -307,7 +307,7 @@ def run_interactive_rlhf(
         # Optional: teach the VLM by example for this and future sessions
         print("\nOptional — provide reference image(s) so the VLM learns what")
         print("a staircase/elevator looks like in these plans. These are reused")
-        print("in every future RLHF call. Leave empty to skip.")
+        print("in every future review call. Leave empty to skip.")
         while True:
             ex_path = input("  Example image path (or ENTER to continue): ").strip().strip('"')
             if not ex_path:
@@ -323,11 +323,11 @@ def run_interactive_rlhf(
         # Persist the hint
         memory = add_feedback(source_file, hint, memory)
 
-        # Re-learn
-        print("  Re-learning with hint...")
-        new_graph = relearn_graph(client, image_path, graph, [hint])
+        # Re-extract
+        print("  Re-extracting with hint...")
+        new_graph = reextract_graph(client, image_path, graph, [hint])
         if new_graph is None:
-            print("  Re-learn FAILED.")
+            print("  Re-extraction FAILED.")
             continue
 
         # Save the updated graph
@@ -345,13 +345,13 @@ def run_interactive_rlhf(
                 from src.config import VIS_DIR
                 from src.utils.visualization import draw_side_by_side
                 VIS_DIR.mkdir(parents=True, exist_ok=True)
-                vis_path = VIS_DIR / f"{image_path.stem}_aggregation_rlhf.png"
+                vis_path = VIS_DIR / f"{image_path.stem}_aggregation_reviewed.png"
                 draw_side_by_side(
                     image_path, new_graph,
                     save_path=vis_path,
-                    title=f"{new_graph['dataset']} / {image_path.name} (after RLHF)",
+                    title=f"{new_graph['dataset']} / {image_path.name} (after review)",
                 )
             except Exception as e:
                 logger.warning(f"Visualization failed: {e}")
 
-    print("\nRLHF session complete.")
+    print("\nHuman review session complete.")

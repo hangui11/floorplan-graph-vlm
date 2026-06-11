@@ -6,10 +6,10 @@ Steps:
   2. For aggregation images, extract a 2D graph (apartments, stairs, elevators)
   3. Enrich each apartment node with interior details (room counts)
   4. Automated validation (structural/topological checks)
-  5. (Interactive) RLHF for graphs missing stairs/elevators
+  5. (Interactive) Human-in-the-loop refinement for graphs missing stairs/elevators
   6. Stack each 2D graph into a 3D graph (default 3 floors)
 
-Steps 1-4 and 6 are automatic. Step 5 is invoked explicitly with --rlhf.
+Steps 1-4 and 6 are automatic. Step 5 is invoked explicitly with --review.
 """
 import argparse
 import json
@@ -29,7 +29,7 @@ from src.step2_aggregation import (
 )
 from src.step3_apartment_details import enrich_graph, save_enriched_graph
 from src.step4_validate import validate_all
-from src.step5_rlhf import run_interactive_rlhf
+from src.step5_human_review import run_interactive_human_review
 from src.step6_stack3d import stack_all_graphs
 from src.utils.visualization import draw_side_by_side, draw_3d_graph
 
@@ -169,7 +169,7 @@ def run_pipeline(
             f"{summary['needing_human_review']} need human review."
         )
         if summary["graphs_needing_review"]:
-            logger.info(f"  Plans needing review (run `--rlhf` to fix):")
+            logger.info(f"  Plans needing review (run `--review` to fix):")
             for src in summary["graphs_needing_review"]:
                 logger.info(f"    - {src}")
 
@@ -230,8 +230,8 @@ def main():
                         help="Skip Step 6 3D stacking")
     parser.add_argument("--n-floors", type=int, default=3,
                         help="Number of floors for 3D stacking (default: 3)")
-    parser.add_argument("--rlhf", action="store_true",
-                        help="Run the interactive RLHF step only (Step 5)")
+    parser.add_argument("--review", "--rlhf", dest="review", action="store_true",
+                        help="Run the interactive human-in-the-loop refinement step only (Step 5)")
     parser.add_argument("--limit", type=int,
                         help="Process at most N images (for testing)")
     parser.add_argument("--model-path", type=str,
@@ -239,11 +239,11 @@ def main():
 
     args = parser.parse_args()
 
-    if args.rlhf:
+    if args.review:
         # Interactive session only; requires prior validation output
         client = VLMClient(model_path=args.model_path)
         client.load()
-        run_interactive_rlhf(client, visualize=not args.no_vis)
+        run_interactive_human_review(client, visualize=not args.no_vis)
         return
 
     run_pipeline(
