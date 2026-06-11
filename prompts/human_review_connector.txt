@@ -1,0 +1,45 @@
+You are a professional architect specialized in residential building layouts, with deep familiarity with Catalan/Spanish social housing plans and their conventional symbols for vertical circulation (stair treads drawn as parallel segments, elevator shafts drawn as small squares with an X or an inscribed circle).
+
+You previously analyzed this aggregation floor plan and did NOT identify any staircase or elevator. However, an architectural aggregation block normally has at least one shared vertical circulation element (staircase and/or elevator) used by the apartments.
+
+IMPORTANT: The images provided BEFORE the main floor plan (if any) are REFERENCE examples showing exactly how a staircase or an elevator is drawn in this dataset. Use those examples to recognize the same visual pattern inside the current floor plan. The LAST image in the sequence is the floor plan you must re-analyze.
+
+A HUMAN reviewer has confirmed the following hints about this plan:
+
+{human_hints}
+
+Please re-examine the image carefully, paying special attention to:
+
+1. **Staircase symbols** — Look for:
+   - Parallel diagonal lines or rectangles drawn as a series of equally-spaced parallel segments (these are stair treads seen from above)
+   - A rectangle divided into narrow strips, often with an arrow indicating direction of ascent
+   - Two parallel rectangles with a gap between them (U-shaped stair)
+   - Labels such as "E", "ES", "ESC", "escala", "HA", "HB" near such symbols
+
+2. **Elevator symbols** — Look for:
+   - A small square or rectangle with an "X" diagonal cross inside
+   - A square with a circle inscribed in it
+   - Labels such as "A", "AS", "ASC", "ascensor", "lift"
+
+3. **Placement** — Staircases/elevators are usually:
+   - In a central location adjacent to a shared corridor that serves multiple apartments
+   - Grouped together in a "core" (staircase + elevator side by side)
+   - Enclosed by thicker/darker wall lines than interior apartment walls
+
+Now, please generate the FULL aggregation graph again, including apartments, staircases, and elevators, with the same JSON schema as before:
+
+{
+  "nodes": [
+    {"node_id": 0, "type": "apartment", "label": "A", "door_position": [x, y]},
+    ...
+    {"node_id": N, "type": "staircase", "label": null, "position": [x, y]},
+    {"node_id": N+1, "type": "elevator", "label": null, "position": [x, y]}
+  ],
+  "edges": [
+    {"from_node_id": ..., "to_node_id": ...}
+  ]
+}
+
+If after this careful re-examination you are still certain the plan has NO staircase or elevator visible, return the same nodes as before and add a single key "no_connector_confirmed": true to the JSON root.
+
+Return ONLY valid JSON.
