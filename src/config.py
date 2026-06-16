@@ -28,7 +28,10 @@ TEMPERATURE = 0.1
 TOP_P = 0.9
 
 # ── Image classification labels ───────────────────────────────────────────────
-IMAGE_TYPES = ["aggregation", "individual"]
+# Step 1 is three-class. "other" = non-dwelling plans (office, retail, lobby,
+# parking, technical, or pure-circulation floors — no kitchen/bathroom).
+# Only "aggregation" is routed into Steps 2-3; the rest are logged and skipped.
+IMAGE_TYPES = ["aggregation", "individual", "other"]
 
 # ── Aggregation node types ─────────────────────────────────────────────────────
 # In an aggregation block, each apartment is a node. These are the special

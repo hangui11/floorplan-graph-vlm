@@ -6,8 +6,8 @@ Extracts structured topological graphs from floor plan images using **Qwen3-VL-8
 
 ```
   Image ─▶ [1] Classify ─▶ aggregation? ─▶ [2] Extract 2D graph
-                         ↘ individual ─▶ skip        │
-                                                      ▼
+                         ↘ individual / other ─▶ skip (logged)  │
+                                                                ▼
                                          [3] Enrich apartments (room counts)
                                                       │
                                                       ▼
@@ -17,10 +17,12 @@ Extracts structured topological graphs from floor plan images using **Qwen3-VL-8
                                    │                  │
                                    ▼                  │
                     [5] Human-in-the-loop review (hints) ───┤
-                                                      │
-                                                      ▼
-                                         [6] Stack 2D → 3D (N floors)
+                                   │                  │
+                          re-run [4] + [6]            ▼
+                          via --revalidate ─▶ [6] Stack 2D → 3D (N floors)
 ```
+
+Step 1 is **three-class**: `aggregation` / `individual` / `other`. Only `aggregation` plans are extracted; `individual` and `other` (offices, lobbies, parking, pure-circulation floors — no kitchen/bathroom) are logged and skipped.
 
 - **Nodes** in the 2D graph: apartments (at their principal entrance door), staircases, elevators
 - **Edges** in the 2D graph: physical access between apartments and shared circulation
@@ -39,7 +41,7 @@ TFM/
 ├── src/
 │   ├── config.py
 │   ├── vlm_client.py
-│   ├── step1_classify.py                  # Step 1 — classify aggregation/individual
+│   ├── step1_classify.py                  # Step 1 — classify aggregation/individual/other
 │   ├── step2_aggregation.py               # Step 2 — extract 2D graph
 │   ├── step3_apartment_details.py         # Step 3 — enrich apartments
 │   ├── step4_validate.py                  # Step 4 — automated validation
@@ -55,10 +57,11 @@ TFM/
 │   ├── apartment_details.txt
 │   └── human_review_connector.txt
 ├── outputs/
-│   ├── graphs/              # 2D + 3D JSON graphs
-│   ├── visualizations/      # Side-by-side PNGs (2D) + 3D PNGs
-│   ├── logs/                # Classifications, validation reports, human feedback
-│   └── stats/               # Aggregate validation summary
+│   ├── graphs/                  # 2D + 3D JSON graphs (with captured reasoning fields)
+│   ├── visualizations/          # Side-by-side PNGs (2D) + 3D PNGs
+│   ├── human_review_examples/   # Persistent stair/elevator crops (Step 5 few-shot memory)
+│   ├── logs/                    # Classifications, validation reports, human feedback
+│   └── stats/                   # Aggregate validation summary
 ├── download_model.py
 ├── requirements.txt
 └── README.md
@@ -83,9 +86,18 @@ python -m src.pipeline
 # Quick test on 5 images from IBAVI
 python -m src.pipeline --dataset IBAVI --limit 5
 
-# After a run, fix the plans that couldn't find stairs/elevators (Step 5)
+# After a run, fix the plans that couldn't find stairs/elevators (Step 5, interactive)
 python -m src.pipeline --review
+
+# After review, refresh validation + 3D from the corrected graphs (Steps 4+6, no VLM)
+python -m src.pipeline --revalidate
 ```
+
+**Typical end-to-end workflow** (three mutually-exclusive modes):
+
+1. `python -m src.pipeline` — automatic batch: Steps 1–4 + 6. Step 4 writes the list of plans that need review.
+2. `python -m src.pipeline --review` — interactive Step 5: walk the flagged plans, give hints, overwrite the corrected graphs.
+3. `python -m src.pipeline --revalidate` — re-run Steps 4 + 6 against the corrected graphs so the validation summary and 3D graphs reflect the fixes (no model load — fast).
 
 **CLI flags:**
 
@@ -98,7 +110,8 @@ python -m src.pipeline --review
 | `--no-validate` | Skip Step 4 (automated validation) |
 | `--no-stack` | Skip Step 6 (3D stacking) |
 | `--n-floors N` | Number of floors for 3D stacking (default: 3) |
-| `--review` | Run the interactive Step 5 only (human-in-the-loop refinement) |
+| `--review` | Run the interactive Step 5 only (human-in-the-loop refinement). Legacy alias: `--rlhf` |
+| `--revalidate` | Re-run only Steps 4+6 on the graphs already in `outputs/graphs/` (no VLM). Use after `--review` |
 | `--model-path PATH` | Override the model path |
 
 ---
@@ -107,11 +120,14 @@ python -m src.pipeline --review
 
 ### Step 1 — Classification (`step1_classify.py`)
 
-Classifies each image as one of:
+Classifies each image as one of three classes:
 - **aggregation** — full building floor with multiple apartments around shared corridors/stairs/elevators
 - **individual** — single apartment layout or typology catalog
+- **other** — not a habitable dwelling at all: office, retail/commercial locale, lobby, parking, technical/storage, or pure-circulation floor (no kitchen AND no bathroom)
 
-Uses prompt [prompts/classify_image.txt](prompts/classify_image.txt). Only aggregation images proceed. Log saved to `outputs/logs/step1_classification.json`.
+Deterministic greedy decoding (`do_sample=False`) for a stable one-word answer. Two few-shot reference plans (one `aggregation`, one `individual`) are prepended to anchor the decision. The decision procedure leads with kitchen/bathroom counting (zero of both → `other`), so a stair core alone never forces an "aggregation".
+
+Uses prompt [prompts/classify_image.txt](prompts/classify_image.txt). **Only `aggregation` images proceed to Steps 2–3**; `individual`, `other`, and unparseable (`unknown`) results are logged and skipped. Log saved to `outputs/logs/step1_classification.json`.
 
 ### Step 2 — 2D Graph Extraction (`step2_aggregation.py`)
 
@@ -119,7 +135,11 @@ For each aggregation image, the VLM identifies:
 1. **Each apartment** (as a node at its principal entrance door)
 2. **All staircases** (diagonal parallel lines)
 3. **All elevators** (square shafts with X or circle)
-4. **Connections** between them via shared corridors/landings
+4. **Connections** between them via shared corridors/landings (clean hub-and-spoke: apartments link to connectors, not to each other)
+
+Two key behaviors:
+- **Captured reasoning** — the prompt asks the model to emit a `building_analysis` field *inside* the JSON (instructed chain-of-thought, kept machine-parseable) describing the floor's spatial arrangement *before* the coordinates. This trace is saved at the top of the graph JSON for the manual spot-check.
+- **No-fabrication edge rule** — not every apartment must reach a connector. The model is told to emit only edges it can actually trace; a missing edge beats an invented one. Genuinely under-connected graphs are caught by Step 4 and routed to Step 5.
 
 Uses prompt [prompts/analyze_aggregation.txt](prompts/analyze_aggregation.txt). Output: `outputs/graphs/{name}_aggregation.json`.
 
@@ -132,7 +152,9 @@ For every `apartment` node produced by Step 2, the VLM is asked (one targeted ca
 - Total rooms
 - Room labels visible inside the apartment
 
-Output is added as a `details` sub-object on each apartment node. Uses prompt [prompts/apartment_details.txt](prompts/apartment_details.txt).
+The prompt also asks for a `spatial_analysis` reasoning field (where the apartment sits, which walls bound it) so neighboring rooms aren't miscounted; this trace is preserved per apartment. Schema examples are **concrete typed values** (`true`/`false`/`int`), not string descriptions — avoiding the `bool("...") == True` trap on boolean fields like `has_corridor`.
+
+Output is added as a `details` sub-object on each apartment node (including `spatial_analysis`). Uses prompt [prompts/apartment_details.txt](prompts/apartment_details.txt).
 
 ### Step 4 — Automated Validation (`step4_validate.py`)
 
@@ -151,17 +173,21 @@ Each graph gets a `passed` flag, a `needs_human_review` flag (true when connecto
 
 ### Step 5 — Human-in-the-Loop Refinement (`step5_human_review.py`)
 
-Interactive session for the subset of plans flagged by Step 4 (missing stairs/elevators or unreachable apartments). The CLI:
+Interactive session for the subset of plans flagged by Step 4 (missing stairs/elevators or unreachable apartments). For each flagged plan the CLI:
 
-1. Lists each flagged plan with its current state and reasons.
-2. Asks the human for a hint about the connector location (e.g. *"central core between apartments"*, *"labeled ESC on the right"*, *"single-floor house, no connector expected"*).
-3. Re-prompts the VLM with the hint baked into [prompts/human_review_connector.txt](prompts/human_review_connector.txt), which reminds the model what stair/elevator symbols look like.
-4. Overwrites the graph with the corrected version (preserving apartment interior details from Step 3).
-5. Persists the hint to `outputs/logs/human_feedback_memory.json` so future runs can prepend accumulated feedback.
+1. Lists the plan with its current state and the reasons it was flagged.
+2. Asks the human for a **text hint** about the connector location (e.g. *"central core between apartments"*, *"staircase is the parallel-line block at lower-right"*, *"single-floor house, no connector expected"*). **Press ENTER to skip a plan.**
+3. *(Optional)* Asks for a **reference image** — a small **crop of the staircase/elevator symbol itself** (not a full plan). If provided, it is copied into `outputs/human_review_examples/{staircase,elevator}/` and reused as a **persistent few-shot visual example on every future review call**, this session and later ones. **Press ENTER to skip** — the text hint alone is enough.
+4. Re-prompts the VLM with the hint (+ any stored crops) using [prompts/human_review_connector.txt](prompts/human_review_connector.txt), which describes the stair/elevator symbols and adds a `building_analysis` reasoning field.
+5. Overwrites the graph with the corrected version (preserving apartment interior details from Step 3). If the model confirms no connector exists, it records `no_connector_confirmed: true` instead of inventing one.
+6. Persists the hint to `outputs/logs/human_feedback_memory.json` so future runs can prepend accumulated feedback.
+
+Step 5 only rewrites the 2D graphs — it does **not** re-run Steps 4/6. After review, run `--revalidate` to refresh the validation summary and 3D graphs from the corrected graphs.
 
 Trigger with:
 ```bash
-python -m src.pipeline --review
+python -m src.pipeline --review        # interactive
+python -m src.pipeline --revalidate    # then refresh Steps 4+6 (no VLM)
 ```
 
 ### Step 6 — 2D → 3D Stacking (`step6_stack3d.py`)
@@ -183,10 +209,12 @@ Output: `outputs/graphs/{name}_3d.json`, plus a 3D scatter-plot visualization in
   "source_file": "inca_05.jpg",
   "dataset": "INCASOL",
   "type": "aggregation",
+  "building_analysis": "Central stair-and-elevator core serving 4 perimeter apartments.",
   "nodes": [
     {
       "node_id": 0, "type": "apartment", "label": "A", "position": [20, 15],
       "details": {
+        "spatial_analysis": "Apartment A occupies the upper-left quadrant, bounded by the central corridor to the south.",
         "num_bedrooms": 2, "num_bathrooms": 1,
         "num_living_rooms": 1, "num_kitchens": 1, "num_terraces": 1,
         "has_corridor": true, "total_rooms": 6,
@@ -239,10 +267,10 @@ Output: `outputs/graphs/{name}_3d.json`, plus a 3D scatter-plot visualization in
 
 | File | Used in | Purpose |
 |------|---------|---------|
-| [prompts/classify_image.txt](prompts/classify_image.txt) | Step 1 | Classify as `aggregation` or `individual` |
-| [prompts/analyze_aggregation.txt](prompts/analyze_aggregation.txt) | Step 2 | Extract apartments + stairs/elevators + edges |
-| [prompts/apartment_details.txt](prompts/apartment_details.txt) | Step 3 | Count rooms inside a specific apartment |
-| [prompts/human_review_connector.txt](prompts/human_review_connector.txt) | Step 5 | Re-extract graph with human hints about connectors |
+| [prompts/classify_image.txt](prompts/classify_image.txt) | Step 1 | Classify as `aggregation` / `individual` / `other` (one word) |
+| [prompts/analyze_aggregation.txt](prompts/analyze_aggregation.txt) | Step 2 | Extract apartments + stairs/elevators + edges; `building_analysis` reasoning; no-fabrication edge rule |
+| [prompts/apartment_details.txt](prompts/apartment_details.txt) | Step 3 | Count rooms inside a specific apartment; `spatial_analysis` reasoning; typed schema examples |
+| [prompts/human_review_connector.txt](prompts/human_review_connector.txt) | Step 5 | Re-extract graph with human hints about connectors; `building_analysis` reasoning |
 
 ---
 

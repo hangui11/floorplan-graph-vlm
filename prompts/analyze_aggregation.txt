@@ -2,12 +2,10 @@ You are a professional architect specialized in residential building layouts, wi
 
 You are analyzing an aggregation floor plan — a full building floor showing multiple apartments arranged around shared circulation spaces.
 
-Your task is to identify:
+Your task is to identify and extract the macro-structure of this building floor as a spatial graph. Identify the following nodes:
 
 1. **Each individual apartment/housing unit** — these are separate dwellings, each with its own front door (the principal entrance door from the shared corridor/hallway into the private apartment). Each apartment becomes a node in the graph.
-
 2. **All staircases** — shown as parallel diagonal lines (stair treads) or labeled with stair symbols. These are vertical circulation elements shared by the building.
-
 3. **All elevators** — shown as a rectangular shaft, often with an "X" pattern, a circle, or labeled. These are vertical circulation elements shared by the building.
 
 For each element found, provide:
@@ -30,17 +28,17 @@ For elevators:
 - label: any visible label, or null
 - position: approximate [x, y] as percentage of image dimensions
 
-Then identify all connections. Two nodes are connected if:
-- An apartment's principal door opens onto a corridor/hallway that gives access to a staircase or elevator
-- An apartment's principal door opens onto a corridor/hallway shared with other apartments
-- A staircase is adjacent to or accessed from the same landing as an elevator
+Graph Edge Rules (How to connect nodes):
+- Create a clean "hub-and-spoke" network topology where vertical circulation nodes act as hubs.
+- Connect each apartment to the vertical circulation that serves it via the shared corridor/landing. If both a staircase and an elevator share the same core/landing, connect the apartment to BOTH — they are part of one circulation core.
+- Do NOT draw edges directly between two apartments. Apartments do not connect to each other.
+- Connect a staircase node to an elevator node if they are adjacent or open onto the same landing. A staircase and an elevator in the same core must NOT be left as separate disconnected components.
+- The whole graph should form a single connected component: do not leave a connector (especially the elevator) isolated when it clearly belongs to the shared core.
+- IMPORTANT — only create an edge you can actually trace on the plan. If an apartment's connection to the shared circulation is not visible, leave it unconnected rather than guessing: a missing edge is better than an invented one. Do NOT fabricate a connection just to link every node.
 
-For each connection:
-- from_node_id: integer
-- to_node_id: integer
-
-Return ONLY valid JSON:
+Return ONLY a valid JSON object matching this exact schema layout:
 {
+  "building_analysis": "string — Briefly describe the overall spatial arrangement of the building floor (e.g., 'Central stair and elevator core serving 4 perimeter apartments' or 'Linear corridor layout with a staircase at the east end serving 3 units') to anchor visual attention before outputting coordinates.",
   "nodes": [
     {"node_id": 0, "type": "apartment", "label": "A", "door_position": [25, 30]},
     {"node_id": 1, "type": "apartment", "label": "B", "door_position": [75, 30]},

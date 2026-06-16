@@ -172,7 +172,7 @@ The primary objective of this thesis is to design, implement, and validate an au
 To achieve this overarching goal, the research is decomposed into the following specific, verifiable sub-objectives:
 
 \begin{enumerate}
-    \item \textbf{VLM Infrastructure and Deterministic Classification:} Build a reproducible inference framework wrapping a localized VLM (e.g., Qwen3-VL) optimized for constrained hardware. This includes engineering a deterministic classification mechanism utilizing greedy decoding to accurately categorize floor plans as aggregated or individual residential units.
+    \item \textbf{VLM Infrastructure and Deterministic Classification:} Build a reproducible inference framework wrapping a localized VLM (e.g., Qwen3-VL) optimized for constrained hardware. This includes engineering a deterministic classification mechanism utilizing greedy decoding to accurately categorize floor plans into three classes: aggregated residential floors, individual dwellings, and non-residential plans (\textit{other}).
     
     \item \textbf{Few-Shot Visual Prompting Architecture:} Design a multi-stage, persona-driven prompt strategy that employs canonical one-shot and two-shot visual reference examples. This approach decomposes the topological extraction process into focused sub-tasks---classification, aggregation analysis, and apartment-level detailing---to systematically minimize visual hallucination.
     
@@ -196,7 +196,7 @@ The pipeline produces two specific artifacts: (i) structured, per-image 2D archi
 
 The remainder of this thesis is organized as follows:
 \begin{itemize}
-    \item \textbf{Chapter~\ref{ch:background}} reviews the relevant state of the art, covering traditional floor-plan analysis, multi-modal language models, in-context learning strategies, and graph-theoretic representations in architecture.
+    \item \textbf{Chapter~\ref{ch:background}} reviews the relevant state of the art, covering traditional floor-plan analysis, multi-modal language models, in-context learning strategies, and graph-theoretic representations in architecture, and surveys recent related work applying vision-language models to floor plans (Section~\ref{sec:related-work}), positioning this thesis as an annotation-free, prompting-only alternative to the prevailing fine-tuned approaches.
     \item \textbf{Chapter~\ref{ch:problem}} formalizes the problem of unstructured visual data in social housing and presents the high-level system architecture designed to address it.
     \item \textbf{Chapter~\ref{ch:methodology}} details the core methodological contributions, including the deterministic classification strategy, the multi-step 2D extraction prompts, the Human-in-the-Loop (HITL) persistent visual memory, and the deterministic algorithms utilized for 3D vertical alignment.
     \item \textbf{Chapter~\ref{ch:implementation}} documents the technical implementation of the VLM inference wrapper and the dataset processing pipeline.
@@ -243,6 +243,19 @@ Two graph variants are relevant. The \textit{room-adjacency graph} encodes share
 
 Generative models for architectural layout fall into two families. The first operates on bitmaps using diffusion or GANs~\cite{nauata2021housegangenerativeadversariallayout}: it produces visually plausible plans but with no guarantee of structural validity (\eg, rooms may have no door). The second operates on graphs using GNN- or transformer-based architectures~\cite{nauata2020houseganrelationalgenerativeadversarial}, taking a target topology as input and synthesising the corresponding geometry. The graphs produced by the present pipeline are designed to feed the second family of models.
 
+\section{Related Work}
+\label{sec:related-work}
+
+The intersection of multimodal models and floor-plan understanding has become an active research area. Existing approaches can be grouped into three threads, against which the present thesis is positioned.
+
+\paragraph{Multimodal models that vectorise or generate plans (trained).} A first line of work fine-tunes or reinforcement-trains multimodal models to reconstruct or synthesise plans. \textit{FloorplanVLM}~\cite{floorplanvlm2026} casts vectorisation as image-conditioned sequence modelling, transcribing rasters into geometric vector code through Supervised Fine-Tuning followed by Group Relative Policy Optimisation. \textit{HouseMind}~\cite{housemind2026} unifies plan understanding, generation, and editing in a single multimodal LLM by discretising layouts into room-instance tokens with a VQ-VAE and instruction-tuning the model. Both achieve strong geometric and topological fidelity, but both depend on large annotated corpora and a dedicated training stage.
+
+\paragraph{Multimodal models that analyse plans (prompting-based).} A second, closer line uses pre-trained models without task-specific training. Recent studies show that VLMs can parse floor-plan maps and identify structural items under zero- and few-shot prompting~\cite{vlmparsefloorplan2025}, and a DocEng case study evaluates visual LLMs for graphics understanding on floor-plan images~\cite{villmsgraphics2025}. \textit{ViLLA}~\cite{villa2025} similarly applies a vision-language analyzer to floor-plan layout. These works share the present method's prompting paradigm, but target object detection or layout description rather than the relational access graph required for generative modelling, and are not specialised to social-housing conventions.
+
+\paragraph{Residential data under scarcity, and embedding-based analysis.} A third thread addresses the same underlying motivation --- the scarcity of structured residential data --- from a different angle. \textit{Synthetic Homes}~\cite{eshbaugh2026synthetichomes} \emph{generates} multimodal residential building data with generative AI to bypass data-collection barriers, whereas the present work \emph{extracts} structured data from existing plans. Embedding-based methods such as CLIP applied to Korean apartment plans~\cite{clipkorean2026} analyse residential layouts in the same domain but produce similarity embeddings rather than explicit graphs.
+
+\paragraph{Positioning and the choice of prompting over fine-tuning.} This thesis is situated within the prompting-based thread, but differs from all of the above in combining three properties no single prior work provides: it extracts a \emph{topological access graph} (not pixel masks, vector geometry, or embeddings), from \emph{unannotated} Catalan social-housing plans, using a \emph{frozen} VLM driven by prompting alone. The decisive factor in this design is the \textbf{absence of ground-truth annotations} for the IBAVI, IMPSOL, and INCASOL corpora. Fine-tuning and reinforcement-trained approaches such as FloorplanVLM and HouseMind are only viable where a large labelled dataset already exists or can be afforded; for these datasets neither holds, and producing annotations by hand is prohibitively expensive (Section~\ref{sec:problem}). Prompting a pre-trained VLM sidesteps this requirement entirely: the model's general visual-textual competence is steered toward the architectural task through role conditioning, ordered decision procedures, and in-context visual examples, with no parameter updates and therefore no labelled training set. The trade-off is that quality cannot be optimised against a loss on annotated data; the thesis instead controls it through prompt engineering and a self-consistency validation strategy (Section~\ref{sec:assembly}). Thus the present work does not extend any single prior paper but rather occupies an unfilled point in this design space --- annotation-free, prompting-only graph extraction --- while producing graphs intended to feed the very generative models that the trained approaches above represent.
+
 
 % ============================================================
 \chapter{Problem Statement \& System Architecture}
@@ -260,7 +273,7 @@ that maps an image $I \in \mathcal{I}$ to a graph $G \in \mathcal{G}$, where $\m
 Three properties of the problem make it non-trivial.
 
 \begin{enumerate}
-    \item \textbf{Heterogeneous content.} A non-negligible fraction of the images correspond to \textit{aggregation} plans (a full building floor showing several apartments around shared circulation), while the rest are \textit{individual} plans of a single housing. These two categories require distinct extraction logic and must be disambiguated automatically.
+    \item \textbf{Heterogeneous content.} A non-negligible fraction of the images correspond to \textit{aggregation} plans (a full building floor showing several apartments around shared circulation); others are \textit{individual} plans of a single dwelling; and a further subset are \textit{other} plans that are not habitable dwellings at all (offices, commercial locales, lobbies, parking, technical or pure-circulation floors). These categories require distinct handling --- only aggregation plans carry a multi-unit graph to extract --- and must be disambiguated automatically.
     \item \textbf{Visual diversity.} Plans vary in style (colour-filled, monochrome, CAD-rendered, hand-drawn), scale, and language of annotation (Catalan or Spanish). Classical computer-vision techniques struggle with this variability.
     \item \textbf{Absence of ground truth.} No previous annotation effort exists for these datasets, ruling out supervised learning and forcing a validation strategy based on internal consistency, statistical plausibility, and human spot-checks.
 \end{enumerate}
@@ -275,7 +288,7 @@ To ensure the extraction pipeline remains robust, reproducible, and resistant to
     
     \item[Domain Anchoring.] Every prompt initializes with an expert architectural persona and embeds a localized Spanish and Catalan abbreviation dictionary (e.g., \textit{H}, \textit{EMC}, \textit{cuina}). This constraint forces the model to operate within the specific semantic subspace required to correctly interpret regional social-housing conventions.
     
-    \item[Deterministic Execution.] To maximize scientific reproducibility, rigid tasks such as binary classification utilize greedy decoding mechanisms (e.g., enforcing zero temperature and eliminating top-$k$ sampling). Probabilistic sampling is strictly reserved for complex, open-ended extraction tasks where deterministic constraints would degrade the model's spatial reasoning capacity.
+    \item[Deterministic Execution.] To maximize scientific reproducibility, rigid tasks such as the closed-set classification step utilize greedy decoding mechanisms (e.g., enforcing zero temperature and eliminating top-$k$ sampling). Probabilistic sampling is strictly reserved for complex, open-ended extraction tasks where deterministic constraints would degrade the model's spatial reasoning capacity.
     
     \item[Diagnostic Preservation.] Outputs that fail heuristic self-consistency validation are not discarded. Instead, they are archived alongside specific diagnostic flags. This fault-tolerant approach preserves critical failure states to directly inform the Human-in-the-Loop (HITL) visual memory mechanism and facilitate qualitative error analysis.
 \end{description}
@@ -286,7 +299,7 @@ To ensure the extraction pipeline remains robust, reproducible, and resistant to
 The system architecture consists of a six-stage pipeline that systematically decomposes the visual extraction function, denoted as $\phi$, into focused, modular sub-tasks. These sub-tasks are executed by a localized Vision-Language Model (VLM) utilizing tailored, stage-specific prompt architectures.
 
 \begin{description}
-    \item[Step 1 --- Classification.] Each image is categorized as either \textit{aggregation} or \textit{individual} utilizing a deterministic, binary classification prompt. Two canonical reference images are injected as one-shot visual examples to strictly hold the model's visual taxonomy.
+    \item[Step 1 --- Classification.] Each image is categorized as \textit{aggregation}, \textit{individual}, or \textit{other} utilizing a deterministic, three-class classification prompt. The \textit{other} class captures non-residential plans (offices, commercial locales, lobbies, parking, technical or pure-circulation floors) that contain no dwelling to extract; only \textit{aggregation} plans proceed to Steps~2--3, while \textit{individual} and \textit{other} are logged and skipped. Two canonical reference images are injected as one-shot visual examples to strictly hold the model's visual taxonomy.
     
     \item[Step 2 --- Aggregation Analysis.] For multi-unit (aggregation) plans, the VLM identifies discrete apartments, staircases, and elevator shafts as distinct graph nodes, subsequently extracting the topological edges that connect them via shared circulation pathways.
     
@@ -306,7 +319,7 @@ The system architecture consists of a six-stage pipeline that systematically dec
 \section{Data Partitioning}
 \label{sec:partitioning}
 
-The combined corpus of \textit{1,285} floor plans is partitioned, at runtime, by \textbf{Step 1} into the two semantic categories established in Section~\ref{sec:problem}. The classifier is a Qwen3-VL prompt running in deterministic mode --- greedy decoding with $\text{do\_sample} = \mathrm{False}$ --- which makes the partition fully reproducible across executions.
+The combined corpus of \textit{1,285} floor plans is partitioned, at runtime, by \textbf{Step 1} into the three semantic categories established in Section~\ref{sec:problem} (\textit{aggregation}, \textit{individual}, \textit{other}). The classifier is a Qwen3-VL prompt running in deterministic mode --- greedy decoding with $\text{do\_sample} = \mathrm{False}$ --- which makes the partition fully reproducible across executions.
 
 Two reference images are supplied as one-shot in-context examples: \code{inca\_05.jpg} for the aggregation class and \code{inca\_50.jpg} for the individual class, selected for their textbook-clear visual cues (six labelled apartments around a central core with staircase and elevators, versus a single dwelling with fully labelled Catalan room names).
 
@@ -335,7 +348,8 @@ Each prompt lists the unambiguous visual signals that characterise its target ou
 For high-stakes decisions (classification, vertical-circulation detection), the prompt embeds an explicit ordered checklist that the model is instructed to follow. For example, the classification prompt encodes the following routine:
 
 \begin{enumerate}
-    \item Count the kitchens. If exactly one, return \textit{individual}.
+    \item Count the kitchens and bathrooms. If \emph{zero} of both are present (no habitable dwelling room at all---e.g.\ an office, parking, or pure-circulation floor), return \textit{other}. Shared stairs or corridors without any dwelling do not change this.
+    \item Otherwise, count the kitchens. If exactly one, return \textit{individual}.
     \item Count the bathrooms. If exactly one, return \textit{individual}.
     \item Look for repeated apartment identifiers. If none, return \textit{individual}.
     \item Only if multiple kitchens, multiple self-contained units, and a shared circulation element are present, return \textit{aggregation}.
@@ -352,7 +366,7 @@ To avoid circular reference, the wrapper skips an example whenever the target im
 
 \section{2D Topological Extraction}
 
-For each image, the partition assigned in Step~1 determines the next call. Aggregation plans enter Step~2; individual plans bypass it and enter Step~3 directly.
+For each image, the partition assigned in Step~1 determines the next call. Only \textit{aggregation} plans enter the extraction path (Steps~2--3); \textit{individual} and \textit{other} plans are logged and skipped, as they carry no multi-unit graph to extract.
 
 \subsection{Aggregation Analysis (Step 2)}
 

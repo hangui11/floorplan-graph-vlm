@@ -104,8 +104,11 @@ def analyze_aggregation(
         logger.error(f"Missing 'nodes' or 'edges' in response for {image_path.name}")
         return None
 
+    building_analysis = result.get("building_analysis")
     result["nodes"] = _normalize_nodes(result["nodes"])
     result["edges"] = _normalize_edges(result["edges"], result["nodes"])
+    # Preserve the model's reasoning trace for posterior human spot-checks.
+    result["building_analysis"] = building_analysis
 
     return result
 
@@ -187,6 +190,7 @@ def build_aggregation_graph(
         "source_file": source_file,
         "dataset": dataset,
         "type": "aggregation",
+        "building_analysis": analysis.get("building_analysis"),
         "nodes": analysis["nodes"],
         "edges": analysis["edges"],
         "metadata": {},

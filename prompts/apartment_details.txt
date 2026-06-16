@@ -1,23 +1,37 @@
 You are a professional architect specialized in residential building layouts, with deep familiarity with Catalan/Spanish social housing plans and their conventional room abbreviations (H/D = bedroom, EMC/SC = living-kitchen, B/CH = bathroom, Te/T/Jh = terrace, P/Db = corridor…).
 
 You are analyzing an aggregation floor plan that contains multiple apartments.
+Focus ONLY on the apartment labeled "{apartment_label}" (located approximately at position [{x}, {y}] as a percentage of image dimensions).
 
-Focus ONLY on the apartment labeled "{apartment_label}" (located approximately at position [{x}, {y}] as percentage of image dimensions).
+Your task is to identify the boundary walls of THIS single apartment and extract its internal room composition based on the visible labels. 
 
-For THIS single apartment, provide the following information based on what is visible on the plan:
+Important Extraction Rules:
+- Count ONLY rooms strictly enclosed within the boundary walls of apartment "{apartment_label}". Do not count rooms belonging to neighboring apartments or shared corridors.
+- "EMC" / "SC" / "S-C" indicate a combined Living-Kitchen space. If you see "EMC", count it as 1 kitchen AND 1 living_room, but treat it as a single enclosed space when calculating total_rooms.
+- If you cannot clearly see the interior of this apartment, set all counts to 0 and room_labels to [].
 
-- num_bedrooms: integer — count of bedrooms (labeled H, H1, H2, D, D1, dormitori, habitació...)
-- num_bathrooms: integer — count of bathrooms and toilets (labeled B, CH, bany, WC...)
-- num_kitchens: integer — count of kitchens (labeled K, C, cuina) — note: "EMC" / "SC" count as 1 kitchen and 1 living_room
-- num_living_rooms: integer — count of living/dining rooms (labeled EMC, EM, SC, S, estar, menjador, sala)
-- num_terraces: integer — count of terraces, balconies, winter gardens, porches (labeled Te, T, T1, T2, Jh, Px, Po, terrassa, balcó)
-- has_corridor: boolean — true if the apartment has an internal corridor or distributor (P, Db, Ds, passadís)
-- total_rooms: integer — total count of all enclosed rooms inside this apartment (sum of everything above, but treating EMC/SC as a single room)
-- room_labels: list of strings — the labels visible inside this apartment, e.g. ["H1", "H2", "EMC", "B"]
+Field notes (read before filling the JSON):
+- "spatial_analysis": briefly state where this apartment is located and identify its surrounding walls to prevent counting neighboring rooms.
+- "num_bedrooms": count of bedrooms (H, H1, H2, D, D1, dormitori, habitació...).
+- "num_bathrooms": count of bathrooms/toilets (B, CH, bany, WC...).
+- "num_kitchens": count of kitchens (K, C, cuina) AND combined spaces (EMC, SC).
+- "num_living_rooms": count of living/dining rooms (E, EM, S, estar, menjador) AND combined spaces (EMC, SC).
+- "num_terraces": count of terraces, balconies, winter gardens (Te, T, Jh, Px, Po, terrassa, balcó).
+- "has_corridor": true if there is an internal distributor (P, Db, Ds, passadís), otherwise false.
+- "total_rooms": total count of physical enclosed rooms inside this apartment.
+- "room_labels": the exact labels visible inside this apartment.
 
-Important:
-- Count ONLY rooms that belong to this specific apartment, not rooms of other apartments on the same plan.
-- If you cannot clearly see the interior of this apartment, set all counts to null and room_labels to [].
+Return ONLY a valid JSON object matching this exact schema (the values below are concrete examples of the correct TYPE, not text to copy):
+{
+  "spatial_analysis": "Apartment B is in the lower-left quadrant, bounded by the central corridor to the north and the building wall to the west.",
+  "num_bedrooms": 2,
+  "num_bathrooms": 1,
+  "num_kitchens": 1,
+  "num_living_rooms": 1,
+  "num_terraces": 1,
+  "has_corridor": true,
+  "total_rooms": 5,
+  "room_labels": ["H1", "H2", "EMC", "B", "Te"]
+}
 
-Return ONLY valid JSON:
-{"num_bedrooms": 2, "num_bathrooms": 1, "num_kitchens": 1, "num_living_rooms": 1, "num_terraces": 1, "has_corridor": true, "total_rooms": 6, "room_labels": ["H1", "H2", "EMC", "B", "P", "Te"]}
+Execute the spatial analysis silently inside the JSON. Do NOT wrap the output in markdown code blocks (```json). Output ONLY the raw JSON brackets.

@@ -1,8 +1,10 @@
 """
-Step 1: Classify each image as 'aggregation' or 'individual'.
+Step 1: Classify each image as 'aggregation', 'individual', or 'other'.
 
 - aggregation: Full building floor with multiple apartments + shared circulation
 - individual: Single apartment/housing unit layout
+- other: Not a habitable dwelling (office, retail, lobby, parking, technical or
+  pure-circulation floor) — no kitchen and no bathroom; skipped by the pipeline.
 """
 import json
 import logging
@@ -45,10 +47,10 @@ def _classification_examples(target: Path) -> list[tuple[Path, str]]:
 
 def classify_image(client: VLMClient, image_path: Path, prompt: str) -> str:
     """
-    Classify a single image as 'aggregation' or 'individual'.
+    Classify a single image as 'aggregation', 'individual', or 'other'.
 
     Returns:
-        'aggregation', 'individual', or 'unknown'.
+        'aggregation', 'individual', 'other', or 'unknown'.
     """
     response = client.query(
         image_path,
@@ -57,11 +59,16 @@ def classify_image(client: VLMClient, image_path: Path, prompt: str) -> str:
         deterministic=True,
     ).strip().lower()
 
-    # Extract the classification word from the response
+    # Extract the classification word from the response. Order matters:
+    # 'aggregation'/'individual' are the load-bearing classes; 'other' is the
+    # non-dwelling catch-all checked last so a stray "other" in a longer answer
+    # does not pre-empt a clear aggregation/individual verdict.
     if "aggregation" in response:
         return "aggregation"
     elif "individual" in response:
         return "individual"
+    elif "other" in response:
+        return "other"
     else:
         logger.warning(
             f"Could not parse classification for {image_path.name}: {response!r}"
@@ -78,11 +85,11 @@ def classify_dataset(
     Classify all images in the dataset(s).
 
     Returns:
-        Dict with keys 'aggregation', 'individual', 'unknown',
+        Dict with keys 'aggregation', 'individual', 'other', 'unknown',
         each a list of image Paths.
     """
     prompt = load_prompt()
-    results = {"aggregation": [], "individual": [], "unknown": []}
+    results = {"aggregation": [], "individual": [], "other": [], "unknown": []}
     log_entries = []
 
     datasets = {dataset_name: DATASETS[dataset_name]} if dataset_name else DATASETS
@@ -113,6 +120,7 @@ def classify_dataset(
         f"Classification results: "
         f"{len(results['aggregation'])} aggregation, "
         f"{len(results['individual'])} individual, "
+        f"{len(results['other'])} other, "
         f"{len(results['unknown'])} unknown"
     )
 

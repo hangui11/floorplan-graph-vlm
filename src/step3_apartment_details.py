@@ -75,6 +75,8 @@ def _normalize_details(details: dict) -> dict:
         "has_corridor": bool(details.get("has_corridor")) if details.get("has_corridor") is not None else None,
         "total_rooms": _safe_int(details.get("total_rooms")),
         "room_labels": details.get("room_labels") or [],
+        # Preserve the model's reasoning trace for posterior human spot-checks.
+        "spatial_analysis": details.get("spatial_analysis"),
     }
 
     # Sanity: total_rooms should equal sum of counted rooms

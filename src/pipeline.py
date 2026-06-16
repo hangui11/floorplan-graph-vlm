@@ -68,6 +68,8 @@ def process_aggregation_image(
         f"{meta['num_staircases']} stairs, {meta['num_elevators']} elevators, "
         f"{meta['num_edges']} edges"
     )
+    if graph.get("building_analysis"):
+        logger.info(f"    Step 2 reasoning: {graph['building_analysis']}")
 
     # Step 3: apartment details
     if enrich:
@@ -86,6 +88,56 @@ def process_aggregation_image(
         )
 
     return graph
+
+
+def run_revalidation(
+    visualize: bool = True,
+    validate: bool = True,
+    stack: bool = True,
+    n_floors: int = 3,
+):
+    """
+    Re-run only the non-VLM downstream steps (Step 4 validation + Step 6 3D
+    stacking) against the graphs currently on disk in outputs/graphs/.
+
+    Used standalone after Step 5 human review (`--revalidate`) to refresh the
+    validation summary and 3D graphs from the corrected 2D graphs, and reused
+    by run_pipeline() at the end of a full run. Touches no VLM.
+    """
+    # Step 4: automated validation
+    if validate:
+        logger.info(f"--- Step 4: automated validation ---")
+        summary = validate_all()
+        logger.info(
+            f"  {summary['passing']}/{summary['total_graphs']} passed. "
+            f"{summary['needing_human_review']} need human review."
+        )
+        if summary["graphs_needing_review"]:
+            logger.info(f"  Plans needing review (run `--review` to fix):")
+            for src in summary["graphs_needing_review"]:
+                logger.info(f"    - {src}")
+
+    # Step 6: 3D stacking
+    if stack:
+        logger.info(f"--- Step 6: stacking 2D graphs into 3D ({n_floors} floors) ---")
+        outputs = stack_all_graphs(n_floors=n_floors)
+        logger.info(f"  Wrote {len(outputs)} 3D graphs.")
+
+        # Render 3D visualization for each
+        if visualize:
+            for out in outputs:
+                with open(out, "r", encoding="utf-8") as f:
+                    building = json.load(f)
+                stem = Path(building["source_file"]).stem
+                vis_path = VIS_DIR / f"{stem}_3d.png"
+                try:
+                    draw_3d_graph(
+                        building,
+                        save_path=vis_path,
+                        title=f"{building['dataset']} / {stem} (3D, {n_floors} floors)",
+                    )
+                except Exception as e:
+                    logger.warning(f"  3D viz failed for {stem}: {e}")
 
 
 def run_pipeline(
@@ -141,7 +193,8 @@ def run_pipeline(
 
         logger.info(
             f"  {len(aggregation_images)} aggregation / "
-            f"{len(image_files) - len(aggregation_images)} individual"
+            f"{len(image_files) - len(aggregation_images)} non-aggregation "
+            f"(individual / other / unknown — skipped from extraction)"
         )
 
         # Steps 2-3: extract and enrich
@@ -160,44 +213,18 @@ def run_pipeline(
     with open(LOGS_DIR / "step1_classification.json", "w", encoding="utf-8") as f:
         json.dump(all_classifications, f, indent=2, ensure_ascii=False)
 
-    # Step 4: automated validation
-    if validate:
-        logger.info(f"--- Step 4: automated validation ---")
-        summary = validate_all()
-        logger.info(
-            f"  {summary['passing']}/{summary['total_graphs']} passed. "
-            f"{summary['needing_human_review']} need human review."
-        )
-        if summary["graphs_needing_review"]:
-            logger.info(f"  Plans needing review (run `--review` to fix):")
-            for src in summary["graphs_needing_review"]:
-                logger.info(f"    - {src}")
-
-    # Step 6: 3D stacking
-    if stack:
-        logger.info(f"--- Step 6: stacking 2D graphs into 3D ({n_floors} floors) ---")
-        outputs = stack_all_graphs(n_floors=n_floors)
-        logger.info(f"  Wrote {len(outputs)} 3D graphs.")
-
-        # Render 3D visualization for each
-        if visualize:
-            for out in outputs:
-                with open(out, "r", encoding="utf-8") as f:
-                    building = json.load(f)
-                stem = Path(building["source_file"]).stem
-                vis_path = VIS_DIR / f"{stem}_3d.png"
-                try:
-                    draw_3d_graph(
-                        building,
-                        save_path=vis_path,
-                        title=f"{building['dataset']} / {stem} (3D, {n_floors} floors)",
-                    )
-                except Exception as e:
-                    logger.warning(f"  3D viz failed for {stem}: {e}")
+    # Steps 4 + 6: validation and 3D stacking (no VLM)
+    run_revalidation(
+        visualize=visualize,
+        validate=validate,
+        stack=stack,
+        n_floors=n_floors,
+    )
 
     # Summary
     n_agg = sum(1 for c in all_classifications if c["classification"] == "aggregation")
     n_ind = sum(1 for c in all_classifications if c["classification"] == "individual")
+    n_oth = sum(1 for c in all_classifications if c["classification"] == "other")
     n_unk = sum(1 for c in all_classifications if c["classification"] == "unknown")
 
     logger.info(f"\n{'='*60}")
@@ -205,6 +232,7 @@ def run_pipeline(
     logger.info(f"  Total images:   {len(all_classifications)}")
     logger.info(f"  Aggregation:    {n_agg}")
     logger.info(f"  Individual:     {n_ind}")
+    logger.info(f"  Other:          {n_oth}")
     logger.info(f"  Unknown:        {n_unk}")
     logger.info(f"  Graphs:         {len(all_graphs)}")
     logger.info(f"  Failed:         {len(failed)}")
@@ -232,6 +260,9 @@ def main():
                         help="Number of floors for 3D stacking (default: 3)")
     parser.add_argument("--review", "--rlhf", dest="review", action="store_true",
                         help="Run the interactive human-in-the-loop refinement step only (Step 5)")
+    parser.add_argument("--revalidate", action="store_true",
+                        help="Re-run only Steps 4+6 (validation + 3D stacking) on the "
+                             "graphs already in outputs/graphs/ — no VLM. Use after --review.")
     parser.add_argument("--limit", type=int,
                         help="Process at most N images (for testing)")
     parser.add_argument("--model-path", type=str,
@@ -244,6 +275,16 @@ def main():
         client = VLMClient(model_path=args.model_path)
         client.load()
         run_interactive_human_review(client, visualize=not args.no_vis)
+        return
+
+    if args.revalidate:
+        # Steps 4+6 only, against the graphs already on disk. No VLM/model load.
+        run_revalidation(
+            visualize=not args.no_vis,
+            validate=not args.no_validate,
+            stack=not args.no_stack,
+            n_floors=args.n_floors,
+        )
         return
 
     run_pipeline(

@@ -174,20 +174,26 @@ def draw_3d_graph(
     building: dict,
     save_path: str | Path | None = None,
     title: str | None = None,
-    floor_spacing: float = 120.0,
+    floor_spacing: float = 100.0,
 ):
     """
     Draw a 3D building graph with each floor stacked vertically and vertical
     edges connecting staircase/elevator nodes across floors.
+
+    Each floor is rendered as a translucent plane at its own height so the
+    levels read as clearly separated storeys. The box aspect is set so floors
+    are evenly spaced instead of being squished by matplotlib's auto-scaling.
     """
     from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 — registers 3D projection
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-    fig = plt.figure(figsize=(14, 10))
+    fig = plt.figure(figsize=(12, 11))
     ax = fig.add_subplot(111, projection="3d")
 
     nodes_by_id = {n["node_id"]: n for n in building["nodes"]}
+    n_floors = building.get("n_floors", 1)
 
-    # 3D coordinates per node
+    # 3D coordinates per node. z = floor index * spacing.
     coords = {}
     for n in building["nodes"]:
         floor = n.get("floor", 0)
@@ -196,8 +202,20 @@ def draw_3d_graph(
             x, y = float(pos[0]), float(pos[1])
         except (TypeError, ValueError, IndexError):
             x, y = 50.0, 50.0
-        # z = floor height
+        # Flip y so (0,0) reads as top-left, matching the source image.
         coords[n["node_id"]] = (x, 100 - y, floor * floor_spacing)
+
+    # Draw a translucent slab + outline for each floor so storeys are distinct.
+    for f in range(n_floors):
+        z = f * floor_spacing
+        corners = [(0, 0, z), (100, 0, z), (100, 100, z), (0, 100, z)]
+        slab = Poly3DCollection([corners], alpha=0.06, facecolor="steelblue",
+                                edgecolor="gray", linewidths=0.6)
+        ax.add_collection3d(slab)
+        # Floor label anchored at a back corner of its own slab.
+        ax.text(2, 100, z + floor_spacing * 0.04,
+                f"Floor {f}", fontsize=10, fontweight="bold",
+                color="darkslategray")
 
     # Draw edges
     for e in building["edges"]:
@@ -214,9 +232,9 @@ def draw_3d_graph(
 
     # Draw nodes grouped by type for legend
     for ntype, marker, size in (
-        ("apartment", "o", 80),
-        ("staircase", "s", 70),
-        ("elevator",  "D", 70),
+        ("apartment", "o", 90),
+        ("staircase", "s", 80),
+        ("elevator",  "D", 80),
     ):
         xs, ys, zs = [], [], []
         for nid, n in nodes_by_id.items():
@@ -230,21 +248,21 @@ def draw_3d_graph(
                 marker=marker, s=size,
                 edgecolors="black", linewidths=0.8,
                 label=ntype.capitalize(),
-                depthshade=True,
+                depthshade=False,
             )
-
-    # Label floors
-    n_floors = building.get("n_floors", 1)
-    for f in range(n_floors):
-        ax.text(
-            0, 110, f * floor_spacing,
-            f"Floor {f}", fontsize=10, fontweight="bold",
-            color="darkslategray",
-        )
 
     ax.set_xlabel("X (% image width)")
     ax.set_ylabel("Y (% image height)")
-    ax.set_zlabel("Floor")
+    ax.set_zlabel("Floor height")
+    # Hide numeric z ticks (floor labels carry the meaning) and place ticks at storeys.
+    ax.set_zticks([f * floor_spacing for f in range(n_floors)])
+    ax.set_zticklabels([str(f) for f in range(n_floors)])
+
+    # Even, readable proportions: keep x/y square and give z room per floor so
+    # storeys do not bunch up. A viewing elevation that shows the stack clearly.
+    ax.set_box_aspect((1, 1, max(0.6, 0.5 * n_floors)))
+    ax.view_init(elev=18, azim=-60)
+
     ax.legend(loc="upper left", fontsize=9)
 
     if title:

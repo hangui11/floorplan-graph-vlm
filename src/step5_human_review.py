@@ -19,7 +19,7 @@ import logging
 import shutil
 from pathlib import Path
 
-from src.config import PROMPTS_DIR, GRAPHS_DIR, LOGS_DIR, OUTPUT_DIR
+from src.config import PROMPTS_DIR, GRAPHS_DIR, LOGS_DIR, OUTPUT_DIR, DATASETS, JPG_DIR
 from src.vlm_client import VLMClient
 from src.step2_aggregation import _normalize_nodes, _normalize_edges, build_aggregation_graph
 from src.step4_validate import validate_graph
@@ -162,6 +162,8 @@ def reextract_graph(
     analysis = {
         "nodes": _normalize_nodes(result["nodes"]),
         "edges": [],
+        # Carry the review-time reasoning into the rebuilt graph.
+        "building_analysis": result.get("building_analysis"),
     }
     analysis["edges"] = _normalize_edges(result["edges"], analysis["nodes"])
 
@@ -258,6 +260,31 @@ def print_review_report(items: list[dict]):
     print(f"\n  {'='*70}\n")
 
 
+def _resolve_image_path(source_file: str, dataset: str | None) -> Path | None:
+    """
+    Resolve a graph's stored source_file (typically a bare filename like
+    'inca_555.jpg') to the actual image on disk under JPG/<dataset>/.
+
+    Tries, in order: the path as-given, JPG/<dataset>/<name>, then a recursive
+    search under JPG/. Returns the first existing path, or None.
+    """
+    p = Path(source_file)
+    if p.exists():
+        return p
+
+    name = p.name
+    if dataset and dataset in DATASETS:
+        candidate = DATASETS[dataset] / name
+        if candidate.exists():
+            return candidate
+
+    matches = list(JPG_DIR.rglob(name))
+    if matches:
+        return matches[0]
+
+    return None
+
+
 # ── Interactive session ────────────────────────────────────────────────────────
 
 def run_interactive_human_review(
@@ -282,7 +309,11 @@ def run_interactive_human_review(
         with open(graph_path, "r", encoding="utf-8") as f:
             graph = json.load(f)
 
-        image_path = Path(source_file)
+        image_path = _resolve_image_path(source_file, graph.get("dataset"))
+        if image_path is None:
+            print(f"\n--- {source_file} ---")
+            print(f"  Image file not found under JPG/. Skipped.")
+            continue
 
         print(f"\n--- {source_file} ---")
         print(f"Current state: {it['num_apartments']} apartments, "

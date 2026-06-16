@@ -5,41 +5,38 @@ You previously analyzed this aggregation floor plan and did NOT identify any sta
 IMPORTANT: The images provided BEFORE the main floor plan (if any) are REFERENCE examples showing exactly how a staircase or an elevator is drawn in this dataset. Use those examples to recognize the same visual pattern inside the current floor plan. The LAST image in the sequence is the floor plan you must re-analyze.
 
 A HUMAN reviewer has confirmed the following hints about this plan:
-
 {human_hints}
 
 Please re-examine the image carefully, paying special attention to:
 
-1. **Staircase symbols** — Look for:
-   - Parallel diagonal lines or rectangles drawn as a series of equally-spaced parallel segments (these are stair treads seen from above)
-   - A rectangle divided into narrow strips, often with an arrow indicating direction of ascent
-   - Two parallel rectangles with a gap between them (U-shaped stair)
-   - Labels such as "E", "ES", "ESC", "escala", "HA", "HB" near such symbols
+1. Staircase symbols — Look for parallel diagonal lines or rectangles drawn as a series of equally-spaced parallel segments, a rectangle divided into narrow strips (often with an arrow indicating ascent), or U-shaped parallel rectangles. Look for labels like "E", "ES", "ESC", "escala", "HA", "HB".
+2. Elevator symbols — Look for a small square/rectangle with an "X" diagonal cross inside, a square with a circle inscribed in it, or labels like "A", "AS", "ASC", "ascensor", "lift".
+3. Placement — Staircases/elevators are usually in a central location adjacent to a shared corridor serving multiple apartments, or grouped together in a "core".
 
-2. **Elevator symbols** — Look for:
-   - A small square or rectangle with an "X" diagonal cross inside
-   - A square with a circle inscribed in it
-   - Labels such as "A", "AS", "ASC", "ascensor", "lift"
+Now, please generate the FULL aggregation graph again, including apartments, staircases, and elevators.
 
-3. **Placement** — Staircases/elevators are usually:
-   - In a central location adjacent to a shared corridor that serves multiple apartments
-   - Grouped together in a "core" (staircase + elevator side by side)
-   - Enclosed by thicker/darker wall lines than interior apartment walls
+Graph Edge Rules (How to connect nodes):
+- Create a clean "hub-and-spoke" network topology where vertical circulation nodes act as hubs.
+- Connect each apartment to the vertical circulation that serves it via the shared corridor/landing. If both a staircase and an elevator share the same core/landing, connect the apartment to BOTH (they are part of one circulation core).
+- Connect the staircase and the elevator to each other when they sit in the same core or open onto the same landing. A staircase and an elevator in the same core must NOT be left as separate disconnected components.
+- Do NOT draw edges directly between two apartments.
+- The whole graph must form a SINGLE connected component: every apartment and every connector must be reachable from every other through the core. Do not leave any node (especially the elevator) isolated.
+- Only create an edge you can actually trace on the plan. If an apartment's connection to the shared circulation is genuinely not visible after re-examination, leave it unconnected rather than guessing: a missing edge is better than an invented one.
 
-Now, please generate the FULL aggregation graph again, including apartments, staircases, and elevators, with the same JSON schema as before:
+Field notes (read before filling the JSON):
+- "building_analysis": acknowledge the human hints and briefly describe exactly where you found the previously missed vertical circulation, to anchor your visual attention before outputting coordinates.
+- "no_connector_confirmed": include this key with the literal value true ONLY if, after this careful re-examination and reading the human hints, you are absolutely certain the plan has NO staircase or elevator visible. Otherwise OMIT the key entirely (do not set it to false, do not write a sentence as its value).
 
+Return ONLY a valid JSON object matching this exact schema layout (note the values below are concrete examples of the correct TYPE, not text to copy):
 {
+  "building_analysis": "Found the staircase in the central core between apartments A and B, as the reviewer indicated.",
   "nodes": [
-    {"node_id": 0, "type": "apartment", "label": "A", "door_position": [x, y]},
-    ...
-    {"node_id": N, "type": "staircase", "label": null, "position": [x, y]},
-    {"node_id": N+1, "type": "elevator", "label": null, "position": [x, y]}
+    {"node_id": 0, "type": "apartment", "label": "A", "door_position": [25, 30]},
+    {"node_id": 1, "type": "staircase", "label": null, "position": [50, 50]}
   ],
   "edges": [
-    {"from_node_id": ..., "to_node_id": ...}
+    {"from_node_id": 0, "to_node_id": 1}
   ]
 }
 
-If after this careful re-examination you are still certain the plan has NO staircase or elevator visible, return the same nodes as before and add a single key "no_connector_confirmed": true to the JSON root.
-
-Return ONLY valid JSON.
+Execute the analysis silently inside the JSON. Do NOT wrap the output in markdown code blocks (```json). Output ONLY the raw JSON brackets.
