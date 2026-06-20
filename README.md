@@ -48,6 +48,9 @@ TFM/
 │   ├── step5_human_review.py             # Step 5 — human-in-the-loop refinement
 │   ├── step6_stack3d.py                   # Step 6 — 2D → 3D stacking
 │   ├── pipeline.py                        # End-to-end orchestrator
+│   ├── eval_classification.py             # Step 1 accuracy report (sklearn) from labelled CSV
+│   ├── eval_spotcheck.py                  # Extraction spot-check summary from labelled CSV
+│   ├── stack_custom.py                    # Stack chosen graphs as distinct floors → 3D
 │   └── utils/
 │       ├── json_parser.py
 │       └── visualization.py
@@ -279,7 +282,24 @@ Output: `outputs/graphs/{name}_3d.json`, plus a 3D scatter-plot visualization in
 - **`config.py`** — paths, model config, node-type taxonomy, visualization colors.
 - **`vlm_client.py`** — Qwen3-VL-8B wrapper; loads once into GPU memory (bfloat16, ~16 GB VRAM) and exposes `query(image_path, prompt)`.
 - **`utils/json_parser.py`** — robust JSON extraction (markdown fences, brace matching, trailing-comma/quote fixes).
-- **`utils/visualization.py`** — NetworkX + Matplotlib rendering. `draw_side_by_side()` for 2D, `draw_3d_graph()` for the stacked 3D building.
+- **`utils/visualization.py`** — NetworkX + Matplotlib rendering. `draw_side_by_side()` for 2D, `draw_3d_graph()` for the stacked 3D building (translucent floor planes, even floor spacing).
+
+---
+
+## Analysis Scripts
+
+- **`eval_classification.py`** — Step 1 accuracy evaluation. Reads `outputs/stats/classification_eval.csv` (columns `file,dataset,predicted,truth`; fill `truth` by hand) and prints scikit-learn's `classification_report` (per-class precision/recall/F1), overall accuracy, and a confusion matrix. `--save` also writes `outputs/stats/classification_report.txt`.
+  ```bash
+  python -m src.eval_classification --save
+  ```
+- **`eval_spotcheck.py`** — extraction spot-check summary. Reads `outputs/stats/spotcheck_sample.csv` (manually filled: `missing_nodes`, `spurious_nodes`, `wrong_edges`, `wrong_rooms`, `fully_correct`, plus `true_class`) and reports the fully-correct rate and per-category error rates over the true-aggregation graphs, separating out misclassified (leakage) plans. `--save` writes `outputs/stats/spotcheck_report.txt`.
+  ```bash
+  python -m src.eval_spotcheck --save
+  ```
+- **`stack_custom.py`** — build one 3D building from several *different* 2D graphs (one per floor, bottom-up), instead of replicating a single floor. Connectors on adjacent floors are linked by nearest position. Works best when the floors share a coordinate system (0–100%).
+  ```bash
+  python -m src.stack_custom ibavi_34 ibavi_35 --out ibavi_block
+  ```
 
 ---
 
