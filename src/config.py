@@ -20,9 +20,10 @@ DATASETS = {
 }
 
 # ── Model ──────────────────────────────────────────────────────────────────────
-# MODEL_NAME = "Qwen/Qwen3-VL-8B-Instruct"
-MODEL_NAME = "Qwen/Qwen3-VL-4B-Instruct"
-MODEL_LOCAL_PATH = str(PROJECT_ROOT / "models" / "Qwen3-VL-4B-Instruct")
+MODEL_NAME = "Qwen/Qwen3-VL-8B-Instruct"
+# MODEL_NAME = "Qwen/Qwen3-VL-4B-Instruct"
+# MODEL_LOCAL_PATH = str(PROJECT_ROOT / "models" / "Qwen3-VL-4B-Instruct")
+MODEL_LOCAL_PATH = str(PROJECT_ROOT / "models" / "Qwen3-VL-8B-Instruct")
 MAX_NEW_TOKENS = 2048
 TEMPERATURE = 0.1
 TOP_P = 0.9
@@ -34,8 +35,6 @@ TOP_P = 0.9
 IMAGE_TYPES = ["aggregation", "individual", "other"]
 
 # ── Aggregation node types ─────────────────────────────────────────────────────
-# In an aggregation block, each apartment is a node. These are the special
-# circulation/vertical elements that also become nodes.
 VERTICAL_ELEMENT_TYPES = ["staircase", "elevator"]
 
 # ── One-shot examples (canonical reference plans) ──────────────────────────────

@@ -7,11 +7,11 @@ Usage:
 from pathlib import Path
 from huggingface_hub import snapshot_download
 
-MODEL_REPO = "Qwen/Qwen3-VL-4B-Instruct"
-LOCAL_DIR = Path(__file__).resolve().parent / "models" / "Qwen3-VL-4B-Instruct"
+# MODEL_REPO = "Qwen/Qwen3-VL-4B-Instruct"
+# LOCAL_DIR = Path(__file__).resolve().parent / "models" / "Qwen3-VL-4B-Instruct"
 
-# MODEL_REPO = "Qwen/Qwen3-VL-8B-Instruct"
-# LOCAL_DIR = Path(__file__).resolve().parent / "models" / "Qwen3-VL-8B-Instruct"
+MODEL_REPO = "Qwen/Qwen3-VL-8B-Instruct"
+LOCAL_DIR = Path(__file__).resolve().parent / "models" / "Qwen3-VL-8B-Instruct"
 
 def main():
     LOCAL_DIR.mkdir(parents=True, exist_ok=True)
