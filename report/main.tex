@@ -1,3 +1,10 @@
+% ============================================================
+%  Master's Thesis — Hang Yao
+%  Generative Graph Databases for Building Structures
+%  via Visual Analysis with Large Language Models
+%  Universitat Politècnica de Catalunya — FIB
+% ============================================================
+
 \documentclass[12pt,a4paper,openright]{report}
 
 % ---------- Encoding & language ----------
@@ -24,6 +31,7 @@
 
 % ---------- Graphics ----------
 \usepackage{graphicx}
+\usepackage{float}
 
 % ---------- Bibliography ----------
 \usepackage[
@@ -156,12 +164,12 @@
 
 The architectural domain relies heavily on the manual analysis of 2D floor plans, a process that is time-consuming, costly, and prone to inconsistency between annotators. While the visual verification of spatial correctness still requires a human expert, modern \textbf{Vision-Language Models (VLMs)} offer a credible pathway to automate the structural extraction that precedes it.
 
-This thesis proposes an end-to-end pipeline that converts raster floor-plan images into structured 2D and 3D topological graphs using a locally hosted VLM (\textbf{Qwen3-VL}). The system decomposes the extraction problem into six focused sub-tasks --- classification, aggregation analysis, apartment detailing, graph assembly, human-in-the-loop refinement, and 3D alignment --- each driven by a carefully engineered prompt that combines an architect's profile, strong-signal enumeration, ordered decision procedures, and one-shot visual examples. A deterministic algorithm subsequently aligns vertical circulation elements (staircases and elevators) across floors to produce a cohesive 3D building representation.
+This thesis proposes an end-to-end pipeline that converts raster floor-plan images into structured 2D and 3D topological graphs using a locally hosted VLM (\textbf{Qwen3-VL}). The system decomposes the extraction problem into six focused sub-tasks---classification, aggregation analysis, apartment detailing, graph assembly, human-in-the-loop refinement, and 3D alignment---each driven by a carefully engineered prompt that combines an architect's profile, strong-signal enumeration, ordered decision procedures, and one- and two-shot visual examples. A deterministic algorithm subsequently aligns vertical circulation elements (staircases and elevators) across floors to produce a cohesive 3D building representation.
 
 The pipeline is applied to a corpus of \textit{1,276} social-housing plans from three \textbf{Catalan institutional datasets} (IBAVI, IMPSOL, INCASOL). Since no ground-truth annotations exist for these datasets, validation rests on two complementary criteria: deterministic structural checks on the extracted graphs, and manual spot-checking against the source images. The resulting graph database is designed to feed downstream generative models capable of producing structurally valid residential layouts.
 
 \medskip
-\noindent\textbf{Keywords:} Vision-Language Models, floor-plan analysis, architectural graphs, prompt engineering, social housing, in-context learning, human-feedback
+\noindent\textbf{Keywords:} Vision-Language Models, floor-plan analysis, architectural graphs, prompt engineering, social housing, in-context learning, human-in-the-loop
 
 % -------------------------
 % TABLE OF CONTENTS
@@ -197,9 +205,9 @@ To achieve this overarching goal, the research is decomposed into the following 
     
     \item \textbf{Few-Shot Visual Prompting Architecture:} Design a multi-stage, persona-driven prompt strategy that employs canonical one-shot and two-shot visual reference examples. This approach decomposes the topological extraction process into focused sub-tasks---classification, aggregation analysis, and apartment-level detailing---to systematically minimize visual hallucination.
     
-    \item \textbf{Topological Graph Assembly:} Translate the sequentially extracted visual features into formalized 2D graph structures (encoded via \textit{JSON} and \textit{NetworkX}), where nodes denote discrete apartments and shared circulation elements (e.g., staircases, elevators) --- with each apartment's interior room inventory carried as node attributes --- and edges represent physical spatial connections.
+    \item \textbf{Topological Graph Assembly:} Translate the sequentially extracted visual features into formalized 2D graph structures (encoded via \textit{JSON} and \textit{NetworkX}), where nodes denote discrete apartments and shared circulation elements (e.g., staircases, elevators)---with each apartment's interior room inventory carried as node attributes---and edges represent physical spatial connections.
     
-    \item \textbf{Persistent Visual Memory (HITL):} Implement a human-in-the-loop (HITL) correction mechanism that captures expert architectural feedback. This system will extract reference crops of complex architectural elements and persist them as a dynamic, few-shot visual memory buffer across inference sessions, allowing the model to adapt without requiring weight-level retraining.
+    \item \textbf{Persistent Visual Memory (HITL):} Implement a human-in-the-loop (HITL) correction mechanism that captures a reviewer's architectural feedback. This system will extract reference crops of complex architectural elements and persist them as a dynamic, few-shot visual memory buffer across inference sessions, allowing the model to adapt without requiring weight-level retraining.
     
     \item \textbf{Annotation-Free Validation Strategy:} Formulate and apply an annotation-free validation framework. By enforcing deterministic structural checks on each graph and complementing them with manual spot-checks, the system evaluates the generated topologies without relying on manual ground-truth datasets, which are unavailable for the target architectural corpora.
 \end{enumerate}
@@ -211,7 +219,7 @@ The scope of this research is strictly bounded to Catalan social-housing floor p
 
 The chosen Vision-Language Model is Qwen3-VL (specifically the 8B Instruct variant~\cite{qwen3technicalreport}). This model was selected for its open weights, native multi-image input processing---which is mandatory for few-shot visual prompting---and its state-of-the-art performance on document-understanding benchmarks. This latter capability is highly relevant given the density of architectural text abbreviations on social-housing plans. The model is executed locally and remains completely frozen. All engineering efforts are concentrated entirely on persona-driven prompt design, dynamic in-context visual examples, and pipeline orchestration. This constraint ensures the research remains fully reproducible on standard commodity hardware (e.g., an NVIDIA A5000 GPU for full-dataset inference) while bypassing the financial costs and algorithmic opacity associated with commercial cloud APIs.
 
-The proposed pipeline produces two primary artifacts: (i) structured, per-image 2D architectural graphs in JSON format, capturing room-level semantics and intra-floor topological connections; and (ii) per-building 3D spatial graphs that systematically align the individual 2D floor representations via shared vertical circulation nodes. The downstream generation of novel floor plans utilizing this extracted dataset is explicitly outside the scope of this thesis. Such generative applications are reserved for future work, as they necessitate dedicated generative modeling strategies, including full-parameter fine-tuning or advanced few-shot prompting techniques to conditionally generate valid architectural JSON structures.
+The proposed pipeline produces two primary artifacts: (i) structured, per-image 2D architectural graphs in \textit{JSON} format, capturing room-level semantics and intra-floor topological connections; and (ii) per-building 3D spatial graphs that systematically align the individual 2D floor representations via shared vertical circulation nodes. The downstream generation of novel floor plans utilizing this extracted dataset is explicitly outside the scope of this thesis. Such generative applications are reserved for future work, as they necessitate dedicated generative modeling strategies, including full-parameter fine-tuning or advanced few-shot prompting techniques to conditionally generate valid architectural \textit{JSON} structures.
 
 \section{Document Structure}
 
@@ -221,8 +229,8 @@ The remainder of this thesis is organized as follows:
     \item \textbf{Chapter~\ref{ch:problem}} formalizes the problem of unstructured visual data in social housing and presents the high-level system architecture designed to address it.
     \item \textbf{Chapter~\ref{ch:methodology}} details the core methodological contributions, including the deterministic classification strategy, the multi-step 2D extraction prompts, the Human-in-the-Loop (HITL) persistent visual memory, and the deterministic algorithms utilized for 3D vertical alignment.
     \item \textbf{Chapter~\ref{ch:implementation}} documents the technical implementation of the VLM inference wrapper and the dataset processing pipeline.
-    \item \textbf{Chapter~\ref{ch:experiments}} reports the experimental setup, detailing the validation framework (deterministic structural checks and manual spot-checks) and the statistical results of both the 2D extraction and 3D graph generation.
-    \item \textbf{Chapter~\ref{ch:discussion}} analyzes the successes of the proposed pipeline while critically examining its limitations, particularly regarding visual hallucinations on dense blueprints.
+    \item \textbf{Chapter~\ref{ch:experiments}} outlines the experimental setup and the dual-tiered validation framework, encompassing both deterministic structural checks and manual semantic spot-checks. It presents the quantitative performance of the 2D extraction and 3D graph generation phases, concluding with a comprehensive analysis of the pipeline's end-to-end efficacy.
+    \item \textbf{Chapter~\ref{ch:discussion}} evaluates the successes of the proposed pipeline while critically examining its operational limitations, particularly concerning visual hallucinations on dense blueprints. Furthermore, it explicitly defends the core architectural design decisions, contextualizing these limitations as deliberate engineering trade-offs.
     \item \textbf{Chapter~\ref{ch:conclusion}} concludes the document with a summary of the technical contributions and outlines specific directions for future research.
 \end{itemize}
 
@@ -234,21 +242,21 @@ The remainder of this thesis is organized as follows:
 
 Computer-based interpretation of floor plans is a problem with a forty-year history. Early systems in the 1980s and 1990s focused on raster-to-vector conversion of CAD drawings, relying on heuristics such as \textbf{Hough transforms} to recover walls, doors, and dimensions~\cite{ahmedFloorPlan2011}. These methods worked well on uniformly drafted technical drawings but degraded sharply on scanned, hand-drawn, or stylised plans.
 
-The advent of convolutional neural networks shifted the field towards data-driven approaches. Liu et al.~\cite{liuRaster2Vec2017} introduced \textbf{Raster2Vec}, an end-to-end CNN that directly predicts a vector representation of walls and openings. Subsequent works such as \textbf{CubiCasa5K}~\cite{kalervo2019cubicasa5kdatasetimprovedmultitask} and the \textbf{DeepFloorPlan} family~\cite{zeng2019deepfloorplanrecognition} expanded the taxonomy to include room semantics and furniture, achieving room-level pixel accuracies above 80\% on curated benchmarks.
+The advent of convolutional neural networks shifted the field towards data-driven approaches. Liu et al. introduced \textbf{Raster2Vec}~\cite{liuRaster2Vec2017}, an end-to-end CNN that directly predicts a vector representation of walls and openings. Subsequent works such as \textbf{CubiCasa5K}~\cite{kalervo2019cubicasa5kdatasetimprovedmultitask} and the \textbf{DeepFloorPlan} family~\cite{zeng2019deepfloorplanrecognition} expanded the taxonomy to include room semantics and furniture, achieving room-level pixel accuracies above 80\% on curated benchmarks.
 
-These approaches share three limitations that motivate the present work. First, they require sizable annotated datasets to generalise across visual styles --- a resource that does not exist for Catalan social-housing plans. Second, they output dense pixel masks rather than relational structures: the question \textit{``is the kitchen connected to the living room?''} requires an additional post-processing step. Third, they cannot exploit textual cues such as room labels (\textit{H1}, \textit{EMC}, \textit{cuina}) that are abundant in the source material.
+These approaches share three limitations that motivate the present work. First, they require sizable annotated datasets to generalise across visual styles---a resource that does not exist for Catalan social-housing plans. Second, they output dense pixel masks rather than relational structures: the question \textit{``is the kitchen connected to the living room?''} requires an additional post-processing step. Third, they cannot exploit textual cues such as room labels (\textit{H1}, \textit{EMC}, \textit{cuina}) that are abundant in the source material.
 
 \section{Vision-Language Models}
 
 Multi-modal large language models combine a vision encoder with a transformer language model, enabling joint reasoning over images and text. The first notable open-weight family, \textbf{LLaVA}~\cite{liu2023llava}, demonstrated that a relatively small adapter between a \textbf{CLIP}~\cite{radford2021learningtransferablevisualmodels} image encoder and a \textbf{Vicuna}~\cite{vicuna2023} language model could produce coherent visual question answering. Subsequent architectures---\textbf{BLIP-2}~\cite{li2023blip2bootstrappinglanguageimagepretraining}, \textbf{InternVL}~\cite{chen2024internvlscalingvisionfoundation}, \textbf{Qwen-VL}~\cite{bai2023qwenvlversatilevisionlanguagemodel}---progressively improved visual grounding, optical character recognition, and instruction-following.
 
-The Qwen3-VL family~\cite{qwen3technicalreport}, released in 2025, is particularly relevant to the present work. It natively supports interleaved contexts of up to 256K tokens, seamlessly integrating text, images, and video. The 8B Instruct variant fits comfortably in 16\,GB of GPU memory using \code{bfloat16} precision, which makes it deployable on common research hardware.
+The Qwen3-VL family~\cite{qwen3technicalreport}, released in 2025, is particularly relevant to the present work. It natively supports interleaved contexts of up to 256K tokens, seamlessly integrating text, images, and video. The 8B Instruct variant fits comfortably in 24\,GB of GPU memory using \code{bfloat16} precision, which makes it deployable on common research hardware.
 
 \section{Prompt Engineering and In-Context Learning}
 
 Without fine-tuning, the behaviour of a VLM is governed entirely by the prompt. The literature on prompt engineering has identified several techniques that are directly applicable to architectural extraction.
 
-\paragraph{Role conditioning.} Giving the model in a specific role (\eg, \textit{``you are a professional architect specialised in Catalan social housing''}) has been shown to reduce hallucination on specialised vocabulary~\cite{kong2024betterzeroshotreasoningroleplay}. The persona biases the language model towards the appropriate sub-distribution of its training corpus.
+\paragraph{Role conditioning.} Giving the model a specific role (\eg, \textit{``you are a professional architect specialised in Catalan social housing''}) has been shown to reduce hallucination on specialised vocabulary~\cite{kong2024betterzeroshotreasoningroleplay}. The persona biases the language model towards the appropriate sub-distribution of its training corpus.
 
 \paragraph{Decision procedures.} Decomposing a decision into an explicit ordered checklist---\textit{``first count kitchens, then count bathrooms\ldots''}---emulates the chain-of-thought paradigm~\cite{wei2023chainofthoughtpromptingelicitsreasoning} and reduces premature commitment to incorrect answers.
 
@@ -263,7 +271,7 @@ A floor plan can be naturally encoded as a spatial graph $G = (V, E)$, where ver
 
 Two primary graph variants are relevant to floor plan analysis: the \textit{adjacency graph} and the \textit{access graph} (illustrated in Figure~\ref{fig:graph-variants}). The adjacency graph encodes all shared physical walls, resulting in a dense, heavily interconnected network. In contrast, the access graph encodes only door- and opening-mediated connections. Because it explicitly maps functional human circulation rather than mere geometric proximity, the access graph accurately captures how inhabitants actually traverse the building. Consequently, it is significantly more informative for generative modeling and is the specific representation adopted in this thesis.
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \includegraphics[width=1\textwidth]{figures/graph_variants.png}
     \caption{Comparison of graph encodings for a single residential building floor. Nodes represent individual apartments and shared vertical circulation elements (staircases, elevators). \emph{Left:} The adjacency graph, which forms a dense network by drawing an edge between any two units sharing a physical wall. \emph{Right:} The access graph adopted in this thesis. It forms a sparse, hub-and-spoke topology connecting apartments exclusively to the circulation cores via doors and shared landings, prohibiting direct apartment-to-apartment links to reflect true architectural traversal.}
@@ -283,7 +291,7 @@ The intersection of multimodal models and floor-plan understanding has become an
 
 \paragraph{Residential data under scarcity, and embedding-based analysis.} A third thread addresses the same underlying motivation---the scarcity of structured residential data---from a different angle. \textit{Synthetic Homes}~\cite{eshbaugh2026synthetichomes} \emph{generates} multimodal residential building data with generative AI to bypass data-collection barriers, whereas the present work \emph{extracts} structured data from existing plans. Embedding-based methods such as CLIP applied to Korean apartment plans~\cite{clipkorean2026} analyse residential layouts in the same domain (residential apartment plans) but produce similarity embeddings rather than explicit graphs.
 
-\paragraph{Positioning and the choice of prompting over fine-tuning.} This thesis is situated within the prompting-based thread, but differs from all of the above in combining three properties no single prior work provides: it extracts a \emph{topological access graph} (not pixel masks, vector geometry, or embeddings), from \emph{unannotated} Catalan social-housing plans, using a \emph{frozen} VLM driven by prompting alone. The decisive factor in this design is the \textbf{absence of ground-truth annotations} for the IBAVI, IMPSOL, and INCASOL corpora. Fine-tuning and reinforcement-trained approaches such as FloorplanVLM and HouseMind are only viable where a large labelled dataset already exists; for these datasets neither holds, and producing annotations by hand is prohibitively expensive (Section~\ref{sec:problem}). Prompting a pre-trained VLM sidesteps this requirement entirely: the model's general visual-textual competence is driven toward the architectural task through role conditioning, ordered decision procedures, and in-context visual examples, with no parameter updates and therefore no labelled training set. The trade-off is that quality cannot be optimised against a loss on annotated data; the thesis instead controls it through prompt engineering and validates the output through deterministic structural checks and manual spot-checking against the source images (Section~\ref{sec:validation}). Thus, the present work does not merely extend a single prior study; rather, it occupies an unexplored point in the research landscape: annotation-free, prompting-only topological extraction. Ultimately, the pipeline produces the exact structured graphs required to feed and train the downstream generative models discussed above.
+\paragraph{Positioning.} This thesis is situated within the prompting-based thread, but differs from all of the above in combining three properties no single prior work provides: it extracts a \emph{topological access graph} (not pixel masks, vector geometry, or embeddings), from \emph{unannotated} Catalan social-housing plans, using a \emph{frozen} VLM driven by prompting alone. The factor that makes this combination necessary is the \textbf{absence of ground-truth annotations} for the IBAVI, IMPSOL, and INCASOL corpora: the fine-tuned and reinforcement-trained approaches such as FloorplanVLM and HouseMind are only viable where a large labelled dataset already exists, which for these corpora does not hold (Section~\ref{sec:problem}). The present work therefore does not merely extend a single prior study; rather, it occupies an unexplored point in the research landscape: annotation-free, prompting-only topological extraction, producing the exact structured graphs required to feed the downstream generative models discussed above. The trade-off this choice entails---and the alternative of bootstrapping labels to fine-tune---is examined in Section~\ref{sec:design-decisions}.
 
 
 % ============================================================
@@ -321,8 +329,8 @@ To ensure the extraction pipeline remains robust, reproducible, and resistant to
     
     \item[Diagnostic Preservation and Fault Tolerance.] Outputs that fail at any stage of the pipeline are not immediately discarded; instead, the pipeline routes data based on a strict two-tier failure taxonomy:
     \begin{itemize}
-        \item \textbf{Topological Failures:} Graphs that successfully parse as JSON but fail spatial logic checks (e.g., missing or unreachable vertical circulation) are preserved. They are archived with specific diagnostic flags and routed directly to the Human-in-the-Loop (HITL) step for interactive visual refinement.
-        \item \textbf{Extraction Failures:} Instances where the vision-language model fails outright---producing a hallucinated format or no parseable JSON graph---are isolated. Because no spatial topology exists for a human to refine, these cases entirely bypass the interactive review loop and are reserved strictly for final quantitative error reporting.
+        \item \textbf{Topological Failures:} Graphs that successfully parse as \textit{JSON} but fail spatial logic checks (e.g., missing or unreachable vertical circulation) are preserved. They are archived with specific diagnostic flags and routed directly to the Human-in-the-Loop (HITL) step for interactive visual refinement.
+        \item \textbf{Extraction Failures:} Instances where the vision-language model fails outright---producing a hallucinated format or no parseable \textit{JSON} graph---are isolated. Because no spatial topology exists for a human to refine, these cases entirely bypass the interactive review loop and are reserved strictly for final quantitative error reporting.
     \end{itemize}
 
 \end{description}
@@ -330,39 +338,90 @@ To ensure the extraction pipeline remains robust, reproducible, and resistant to
 
 \section{The Proposed Pipeline}
 
-The system architecture consists of a six-stage pipeline that systematically decomposes the visual extraction function, denoted as $\phi$, into focused, modular sub-tasks. These sub-tasks are executed by a localized Vision-Language Model (VLM) utilizing tailored, stage-specific prompt architectures (Figure \ref{fig:pipeline}).
+The system architecture employs a six-stage hybrid pipeline to systematically decompose the overarching visual extraction function, denoted as $\phi$, into focused, modular sub-tasks (illustrated in Figure~\ref{fig:pipeline}). Crucially, the pipeline strategically bifurcates the workload between neural inference and deterministic computation. 
+
+Steps 1, 2, 3, and 5 rely on the advanced multimodal spatial reasoning capabilities of a localized Vision-Language Model (VLM), governed by tailored, stage-specific prompt architectures. These inference-driven stages harness the VLM to interpret complex raster graphics, translate architectural topologies into structured \textit{JSON} formats, and assimilate contextual Human-in-the-Loop visual feedback. 
+
+Conversely, Step 4 (Graph Assembly and Validation) and Step 6 (3D Alignment) explicitly bypass the VLM. Because these phases govern strict topological mapping and multi-floor spatial registration, they are executed entirely via deterministic algorithmic logic. Deploying a generative neural network for these specific tasks would introduce unnecessary computational overhead and probabilistic risk into operations that demand absolute mathematical precision.
 
 \begin{figure}
     \centering
-    \includegraphics[width=1\linewidth]{figures/pipeline.png}
-    \caption{Overview of the six-stage pipeline. A floor-plan image is first classified (Step~1); only \textit{aggregation} plans continue to the VLM-driven extraction (Steps~2--3), while \textit{individual} and \textit{other} plans are skipped. The assembled graph is checked by deterministic validation (Step~4): graphs that pass proceed directly to Step~6, whereas graphs that fail the connectivity checks take an optional detour to the interactive human-in-the-loop review (Step~5) and are then re-validated. Step~6 stacks the per-floor graphs into a 3D building. Steps~4 and~6 use no VLM.}
+    \includegraphics[width=0.9\linewidth]{figures/pipeline.png}
+    \caption{Overview of the six-stage pipeline. A floor-plan image is first classified (Step~1); only \textit{aggregation} plans continue to the VLM-driven extraction (Steps~2--3), while \textit{individual} and \textit{other} plans are logged and skipped. Every extracted graph then flows unconditionally through deterministic validation (Step~4) to 3D stacking (Step~6) and the final graph JSON: Step~4 validates and reports on each graph but does not gate the pipeline, so even graphs that fail a structural check still reach Step~6. Step~5 is an optional, non-blocking human-in-the-loop review (run manually with \code{--review}, shown dashed): graphs flagged by the diagnostic (soft) connectivity checks may be corrected by a reviewer, after which the corrected 2D graph replaces the original and is re-validated, without interrupting the main Step~4\,$\rightarrow$\,Step~6 flow. Steps~4 and~6 use no VLM.}
     \label{fig:pipeline}
 \end{figure}
 
 \begin{description}
-    \item[Step 1 - Classification.] Each image is categorized as \textit{aggregation}, \textit{individual}, or \textit{other} utilizing a deterministic, three-class classification prompt. The \textit{other} class captures non-residential plans (e.g., offices, commercial locales, lobbies, parking, technical, or pure-circulation floors) that contain no dwellings to extract. Only \textit{aggregation} plans proceed to Steps~2 and 3; \textit{individual} and \textit{other} layouts are excluded from further extraction. To firmly anchor the model's visual taxonomy, canonical reference images are injected into the context window. The complete prompt formulation and the accompanying visual examples are detailed in Appendices~\ref{appendix:prompt-classify} and~\ref{appendix:ex-classify}, respectively.
+    \item[Step 1 - Classification.] Each image is categorized as \textit{aggregation}, \textit{individual}, or \textit{other} utilizing a deterministic, three-class classification prompt. The \textit{other} class captures non-residential plans (e.g., offices, commercial locales, lobbies, parking, technical, or pure-circulation floors) that contain no dwellings to extract. Only \textit{aggregation} plans proceed to Steps~2 and 3; \textit{individual} and \textit{other} layouts are excluded from further extraction. To firmly anchor the model's visual taxonomy, canonical reference images are injected into the context window. The complete prompt formulation and the accompanying visual examples are detailed in Appendices~\ref{appendix:prompt-classify} and ~\ref{appendix:ex-classify}, respectively.
     
     \item[Step 2 - Aggregation Analysis.] For multi-unit (\textit{aggregation}) plans, the VLM identifies discrete apartments, staircases, and elevator shafts as distinct graph nodes. It subsequently extracts the topological edges that connect these elements via shared circulation pathways. The full instructional prompt and its corresponding one-shot output example are provided in Appendices~\ref{appendix:prompt-aggregation} and~\ref{appendix:ex-aggregation}.
     
     \item[Step 3 - Apartment Detailing.] For each apartment node isolated in Step 2, the VLM is queried sequentially to extract internal room compositions and counts, fully detailing the localized sub-graph. The specialized prompt engineered to condition the model for this micro-scale extraction is documented in Appendix~\ref{appendix:prompt-details}.
     
-    \item[Step 4 - Graph Assembly and Validation.] The extracted architectural features are merged into a unified 2D spatial graph, normalized, and subjected to a suite of deterministic structural validation checks. Enforcing the system's fault-tolerance taxonomy, graphs failing diagnostic topological checks are flagged and routed to the subsequent manual review phase, whereas outright strict parsing failures are isolated for error reporting.
+    \item[Step 4 - Structural Validation and Routing.] The extracted architectural features are subjected to a suite of deterministic structural validation checks. Enforcing the system's fault-tolerance taxonomy, graphs failing diagnostic topological checks are flagged and routed to the subsequent manual review phase, whereas outright strict parsing failures are isolated for error reporting.
     
-    \item[Step 5 - Human-in-the-Loop Refinement.] An interactive feedback module allows an expert architect to provide corrective textual hints and reference image crops for flagged graphs. Rather than fine-tuning model weights, these corrections are persisted on disk as a dynamic visual memory, functioning as few-shot in-context learning examples for subsequent inference sessions. The review prompt and an illustrative in-context correction are included in Appendices~\ref{appendix:prompt-review} and~\ref{appendix:ex-review}.
+    \item[Step 5 - Human-in-the-Loop Refinement.] An interactive feedback module allows a human reviewer to provide corrective textual hints and targeted image crops for graphs that fail the Step 4 structural validation. Rather than fine-tuning model weights, these corrections are stored as a dynamic visual memory, functioning as few-shot, in-context learning examples for subsequent inference sessions. The review prompt and an illustrative in-context correction are detailed in Appendices~\ref{appendix:prompt-review} and~\ref{appendix:ex-review}.
     
     \item[Step 6 - 3D Alignment.] Single-floor 2D graphs belonging to the same building are spatially aligned along the Z-axis. This is achieved deterministically by linking vertical penetration nodes (e.g., staircases and elevators) across consecutive floors, yielding a cohesive, multi-story 3D topological graph.
 \end{description}
+
+
+
 
 % ============================================================
 \chapter{Methodology}
 \label{ch:methodology}
 
-\section{Data Partitioning}
-\label{sec:partitioning}
+\section{Classification}
+\label{sec:classification}
 
 The combined corpus of \textit{1,276} floor plans is partitioned, at runtime, by \textbf{Step 1} into the three semantic categories established in Section~\ref{sec:problem} (\textit{aggregation}, \textit{individual}, \textit{other}). The classifier is a Qwen3-VL prompt running in deterministic mode---greedy decoding with $\text{do\_sample} = \mathrm{False}$---which makes the partition fully reproducible across executions.
 
-Two reference images are supplied as one-shot in-context examples: \code{inca\_05.jpg} for the aggregation class and \code{inca\_50.jpg} for the individual class, selected for their textbook-clear visual cues (six labelled apartments around a central core with staircase and elevators, versus a single dwelling with fully labelled Catalan room names).
+
+The prompt that drives this step is reproduced in full in Appendix~\ref{appendix:prompt-classify}; an abridged excerpt is shown below to convey its structure:
+\begin{quote}
+\itshape
+You are a professional architect specialized in residential building design and urban housing, with over 15 years of experience reading and producing technical drawings for Catalan and Spanish social housing projects (IBAVI, IMPSOL, INCASOL). You can tell at a glance whether a plan represents a whole building floor (aggregation of apartments around shared circulation), the internal layout of a single dwelling, or a drawing that is not a habitable dwelling at all (an office floor, retail/commercial locale, lobby, parking, technical/storage floor, or a pure circulation level). You are trained to ignore non-plan graphics such as elevations, sections, 3D renders, legends, area tables, and typology catalogs laid out side-by-side.
+
+Look at this architectural floor plan image and classify it as ONE of the following three categories:
+
+1. "aggregation" — A full building floor plan showing TWO OR MORE separate apartments/dwelling units within a single building envelope. These apartments are grouped around a shared element that belongs to the building (not to any single apartment): this shared element may be a corridor, a staircase core, an elevator, a central courtyard, an interior patio, a landing, a common room, or any circulation/communal space. Strong aggregation signals include:
+   - Multiple apartment identifiers on the same plan such as "1A", "1B", "2A", "2B", "A", "B", "HA", "HB", "HABITATGE A", "HABITATGE B", "PIS 1", "PIS 2"…
+   - Several kitchens (often labeled "Cuina", "C", "Cocina", "K") / bathrooms (labeled "Bany", "B", "Baño") / living areas repeated in different parts of the plan (one per apartment)
+   - A building outline enclosing all apartments together
+   - A shared courtyard, patio, atrium, or common area (labeled "Espai Comú", "pati", "patio", "courtyard") around which the apartments are distributed
+...
+
+\end{quote}
+
+
+
+Two reference images (Figure~\ref{fig:ex-classify}, reproduced from Appendix~\ref{appendix:ex-classify}) are supplied as two-shot in-context examples: \code{inca\_05.jpg} for the aggregation class and \code{inca\_50.jpg} for the individual class, selected for their textbook-clear visual cues (six labelled apartments around a central core with staircase and elevators, versus a single dwelling with fully labelled Catalan room names).
+
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.47\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_05.jpg}
+  \par\smallskip
+  {\footnotesize\itshape ``Reference example --- this plan is an AGGREGATION:
+  multiple apartments (labeled A, A, B, B) arranged around a shared central core
+  with a staircase and two elevators.''}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.47\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_50.jpg}
+  \par\smallskip
+  {\footnotesize\itshape ``Reference example --- this plan is an INDIVIDUAL
+  apartment: a single dwelling with one kitchen (cuina), one bathroom (bany),
+  one living-dining (estar menjador), and two bedrooms (dormitori).''}
+\end{minipage}
+\caption{Two-shot visual examples prepended to the Step~1 classification
+prompt: \code{inca\_05.jpg} (aggregation, left) and \code{inca\_50.jpg}
+(individual, right).}
+\label{fig:ex-classify}
+\end{figure}
 
 \section{Prompt Engineering Strategy}
 \label{sec:prompts}
@@ -401,7 +460,7 @@ This emulates the chain-of-thought paradigm without requiring the model to verba
 \subsection{Visual In-Context Examples}
 \label{sec:visual-icl}
 
-For tasks where visual judgement is decisive, the prompt is augmented with one or two reference images and their expected outputs. Step~1 receives two reference plans (one per class) with concise textual captions identifying their category. Step~2 receives a single canonical aggregation plan paired with its expected \textit{JSON} output, teaching the model both the visual pattern and the response schema simultaneously. Step~5 receives zero, one, two, or three image crops loaded from a persistent directory of human-confirmed examples (see Section~\ref{sec:human-review}).
+For tasks where visual judgement is decisive, the prompt is augmented with one or two reference images and their expected outputs (Appendix \ref{appendix:examples}). Step~1 receives two reference plans (one per class) with concise textual captions identifying their category. Step~2 receives a single canonical aggregation plan paired with its expected \textit{JSON} output, teaching the model both the visual pattern and the response schema simultaneously. Step~5 receives zero, one, two, or three image crops loaded from a persistent directory of human-confirmed examples (see Section~\ref{sec:human-review}).
 
 To avoid circular reference, the wrapper skips an example whenever the target image is the example itself.
 
@@ -411,14 +470,14 @@ For each image, the partition assigned in Step~1 determines the next call. Only 
 
 \subsection{Aggregation Analysis (Step 2)}
 
-The VLM emits a list of \emph{nodes} (apartments, staircases, elevators) and \emph{edges} (door- or landing-mediated connections). Apartments are anchored by their principal-entrance \emph{door\_position}, expressed as a percentage of image dimensions; staircases and elevators carry a centroid \emph{position}. The one-shot reference described in Section~\ref{sec:visual-icl} is provided to enforce both visual pattern and schema adherence.
+The VLM emits a list of \emph{nodes} (apartments, staircases, elevators) and \emph{edges} (door- or landing-mediated connections). Apartments are anchored by their principal-entrance \emph{door\_position}, expressed as a percentage of image dimensions; staircases and elevators carry a centroid \emph{position}. The one-shot reference described in Section~\ref{sec:visual-icl} is provided to enforce both visual pattern and schema adherence and the full prompt is in Appendix \ref{appendix:prompt-aggregation} and the in-context example in Appendix \ref{appendix:ex-aggregation}.
 
 
 \subsection{Apartment Detailing (Step 3)}
 
-The output of Step~2 yields, for each aggregation plan, a list of apartments to inspect individually. The VLM is re-invoked with a localised prompt (Appendix \ref{appendix:prompt-details}) of the form \textit{``focus only on the apartment labelled X, located approximately at $[x, y]$\,\ldots''} and produces a \textit{JSON} object encoding the room inventory: $n_{\text{bedrooms}}$, $n_{\text{bathrooms}}$, $n_{\text{kitchens}}$, $n_{\text{living rooms}}$, $n_{\text{terraces}}$, $\text{has\_corridor}$, $\text{total\_rooms}$, and the list of visible room labels. Individual plans are skipped.
+The output of Step~2 yields, for each aggregation plan, a list of apartments to inspect individually. The VLM is re-invoked with a localised prompt of the form \textit{``focus only on the apartment labelled X, located approximately at $[x, y]$\,\ldots''} and produces a \textit{JSON} object encoding the room inventory: $n_{\text{bedrooms}}$, $n_{\text{bathrooms}}$, $n_{\text{kitchens}}$, $n_{\text{living rooms}}$, $n_{\text{terraces}}$, $\text{has\_corridor}$, $\text{total\_rooms}$, and the list of visible room labels. Unlike Steps~1 and~2, this step is zero-shot: no in-context example image is provided, as the abbreviation dictionary embedded in the prompt suffices. The complete prompt is in Appendix~\ref{appendix:prompt-details}.
 
-\section{Graph Assembly and Validation}
+\section{Structural Validation and Routing}
 \label{sec:assembly}
 
 In Step 4, the structured outputs from the preceding extraction phases are algorithmically merged into a unified 2D spatial graph $G = (V, E)$. Within this graph, apartment nodes encapsulate their internal room inventories (extracted in Step 3) as a nested \texttt{details} attribute. 
@@ -438,18 +497,25 @@ While related, these checks serve distinct purposes. Strict connectivity merely 
 
 Following validation, each graph is appended with automated metadata: a \texttt{passed} boolean (indicating all strict constraints were met) and a \texttt{score} (the fraction of the six checks successfully passed). In accordance with the \emph{Diagnostic Preservation} principle outlined in Section~\ref{sec:principles}, failed checks are permanently embedded as \texttt{flags} inside the \textit{JSON} structure rather than triggering data deletion. A complete example of the resulting 2D graph object, with all node, edge, and metadata fields, is provided in Appendix~\ref{appendix:json-2d}.
 
-This metadata dictates the routing logic for the pipeline. Graphs that pass the strict constraints but fail the diagnostic indicators (e.g., missing or unreachable vertical circulation) trigger a \texttt{needs\_human\_review} flag and are directly routed to the Human-in-the-Loop interface (Step 5). Conversely, graphs that fail strict structural constraints are retained purely for quantitative error logging and are excluded from the human review cycle.
+This metadata dictates the routing logic for the pipeline. Graphs that satisfy all strict constraints but fail one or more diagnostic indicators (e.g., missing or unreachable vertical circulation) trigger a \texttt{needs\_human\_review} flag and are directly routed to the Human-in-the-Loop interface (Step 5). Conversely, graphs that fail strict structural constraints are deemed fatally flawed; they are excluded from the human review cycle and retained purely for quantitative error logging.
 
 \section{Human-in-the-Loop Refinement}
 \label{sec:human-review}
 
-Even with careful prompting, the model occasionally fails to detect elements that an architect would identify immediately, particularly stair cores and elevator shafts drawn in unusual styles. Step~5 provides an interactive command-line tool that lets the architect inject two forms of feedback.
+Even with rigorous prompt engineering, the Vision-Language Model (VLM) occasionally fails to detect elements that a human evaluator would identify immediately, particularly stair cores and elevator shafts drawn using non-standard or highly stylized historical conventions. To address this, Step~5 introduces an interactive Human-in-the-Loop (HITL) module. 
 
-\paragraph{Textual hint.} A free-text description of the missed element (\eg, \textit{``a staircase is present in the central core but was not detected''}) is interpolated into a re-extraction prompt that asks the model to re-examine the image with this knowledge.
+Crucially, this module is exclusively activated for the subset of graphs that triggered diagnostic warnings during Step~4. Fully validated graphs bypass this step entirely. Similarly, graphs that trigger strict structural failures also bypass the human review and are routed directly to Step~6. Because strict failures typically represent severe extraction degradation, attempting manual correction is deemed an inefficient use of resources. By allowing these severely broken graphs to pass through unreviewed, the pipeline ensures the human reviewer's time is spent solely on fixable, high-value edge cases (the diagnostic warnings).
 
-\paragraph{Reference image crop.} The architect may additionally supply a cropped image of the missed element (\eg, the staircase symbol used throughout the dataset). The crop is copied to a persistent directory \code{outputs/human\_review\_examples/} organised by element type (staircase or elevator). On every subsequent VLM invocation, up to three crops per type are re-loaded and prepended as few-shot visual references. This persists the correction across sessions without any model fine-tuning.
+When activated, this HITL interface allows the reviewer to inject targeted corrections---specifically, textual hints and reference image crops---directly into the model's context window to guide a targeted re-extraction. The complete review prompt and an illustrative in-context example are documented in Appendices~\ref{appendix:prompt-review} and~\ref{appendix:ex-review}, respectively.
 
-This design treats human feedback as a form of long-term visual memory: once an architect has annotated one staircase, the model is far more likely to recognise similar staircases across the rest of the dataset.
+
+Ideally, this visual refinement phase would be executed by a licensed architect capable of providing deep, professional-grade typological observations. However, because the review task is strictly bounded to the identification of fundamental architectural semantics (e.g., visually locating doors, staircases, elevators, and standard room boundaries), it does not necessitate formal architectural training. For the scope of this research, the manual review and extraction validation were conducted by the author. Having acquired the foundational domain familiarity required to truly recognize these standard blueprint elements, the author effectively fulfilled the role of the human validator, ensuring the topological integrity of the finalized dataset without requiring external domain experts.
+
+\paragraph{Textual Hint.} A free-text description of the missed element (\eg, \textit{``a staircase is present in the central core but was not detected''}) is interpolated into a re-extraction prompt that asks the model to re-examine the image with this knowledge.
+
+\paragraph{Reference Image Crop.} The reviewer may additionally supply a cropped image of the missed element (\eg, the staircase symbol used throughout the dataset). The crop is copied to a persistent directory \code{outputs/human\_review\_examples/} organised by element type (staircase or elevator). On every subsequent VLM invocation, up to three crops per type are re-loaded and prepended as few-shot visual references. This persists the correction across sessions without any model fine-tuning.
+
+This design treats human feedback as a form of long-term visual memory: once the reviewer has annotated one staircase, the model is far more likely to recognise similar staircases across the rest of the dataset.
 
 \section{3D Spatial Alignment}
 \label{sec:3d}
@@ -458,27 +524,27 @@ A building is not a stack of independent floors but a connected three-dimensiona
 
 Let $\mathcal{B} = \{G_0, G_1, \ldots, G_{F-1}\}$ be the set of per-floor aggregation graphs belonging to the same building, ordered by floor index. The 3D graph $G_{3D} = (V_{3D}, E_{3D})$ is constructed in three phases.
 
-\paragraph{Phase 1 - Node globalisation.} Each node $v \in V_{f}$ on floor $f$ is assigned a global identifier
+\paragraph{Phase 1 - Node Globalisation.} Each node $v \in V_{f}$ on floor $f$ is assigned a global identifier
 \[
     \mathrm{id}_{3D}(v) = f \times 10^{6} + \mathrm{id}_{2D}(v),
 \]
 chosen so that the floor index can be recovered by integer division and the intra-floor identifier by modulo.
 
-\paragraph{Phase 2 - Horizontal-edge replication.} For each floor $f$ and each edge $(u, v) \in E_{f}$, an edge of type \emph{horizontal} is added to $E_{3D}$, tagged with the floor index. These edges encode the within-floor accessibility relationships extracted in Step~2.
+\paragraph{Phase 2 - Horizontal-Edge Replication.} For each floor $f$ and each edge $(u, v) \in E_{f}$, an edge of type \emph{horizontal} is added to $E_{3D}$, tagged with the floor index. These edges encode the within-floor accessibility relationships extracted in Step~2.
 
-\paragraph{Phase 3 - Vertical alignment.} For every pair of consecutive floors $(f, f+1)$, vertical-circulation nodes are paired by spatial proximity. Let $S_{f}$ and $S_{f+1}$ denote the staircase node sets on floors $f$ and $f+1$; a greedy nearest-neighbour matching is performed on their position vectors:
+\paragraph{Phase 3 - Vertical Alignment.} For every pair of consecutive floors $(f, f+1)$, vertical-circulation nodes are paired by spatial proximity. Let $S_{f}$ and $S_{f+1}$ denote the staircase node sets on floors $f$ and $f+1$; a greedy nearest-neighbour matching is performed on their position vectors:
 \[
     \mathrm{match}(s_i, s_j^{\star}) \quad \text{such that} \quad
     s_j^{\star} = \argmin_{s_j \in S_{f+1} \setminus \mathrm{used}} \lVert \mathbf{p}(s_i) - \mathbf{p}(s_j) \rVert_{2}.
 \]
 The same procedure is applied independently to the elevator node sets $L_{f}$ and $L_{f+1}$. Each matched pair contributes one \emph{vertical} edge tagged with the type of the circulation element. Unmatched extras---\eg, a service staircase that exists on only some floors ---are left disconnected and generate an \code{asymmetric\_circulation} flag.
 
-\paragraph{Post-conditions.} The resulting graph is finally checked for global connectivity and for the presence of at least one vertical edge per floor pair. Buildings violating these conditions are flagged but retained. Figure~\ref{fig:3d-example} shows an example of the resulting 3D graph, and its full JSON schema is given in Appendix~\ref{appendix:json-3d}.
+\paragraph{Post-Conditions.} The resulting graph is finally checked for global connectivity and for the presence of at least one vertical edge per floor pair. Buildings violating these conditions are flagged but retained. Figure~\ref{fig:3d-example} shows an example of the resulting 3D graph, and its full \textit{JSON} schema is given in Appendix~\ref{appendix:json-3d}.
 
 
 While the production pipeline replicates a single floor, the same alignment routine also accepts a sequence of distinct per-floor graphs, enabling true multi-floor assembly when separate floor plans of the same building are available.
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.7\textwidth]{figures/ibavi_9_3d.png}
     \caption{Example 3D building graph produced by Step~6. A single floor is
@@ -492,11 +558,11 @@ While the production pipeline replicates a single floor, the same alignment rout
 
 The absence of ground truth precludes conventional supervised metrics computed over the whole corpus. Validation in this thesis therefore relies on two complementary criteria, applied jointly to provide convergent evidence of correctness.
 
-\paragraph{Deterministic structural checks.} Every extracted graph is subjected to the six structural checks of Section~\ref{sec:assembly} (apartment count, connectivity, isolation, connector presence, connector reachability, and duplicate positions). These require no ground truth and yield a per-graph pass rate and quality score over the full dataset.
+\paragraph{Deterministic Structural Checks.} Every extracted graph is subjected to the six structural checks of Section~\ref{sec:assembly} (apartment count, connectivity, isolation, connector presence, connector reachability, and duplicate positions). These require no ground truth and yield a per-graph pass rate and quality score over the full dataset.
 
-\paragraph{Manual classification ground truth.} For Step~1 specifically, the entire corpus of 1,276 plans was manually labelled by the author, assigning each image its true class (\textit{aggregation}, \textit{individual}, or \textit{other}). This exhaustive labelling enables exact classification metrics---accuracy, per-class precision, recall, and $F_1$, and a full confusion matrix---against the model's predictions, rather than a sampled estimate.
+\paragraph{Manual Classification Ground Truth.} For Step~1 specifically, the entire corpus of 1,276 plans was manually labelled by the author, assigning each image its true class (\textit{aggregation}, \textit{individual}, or \textit{other}). This exhaustive labelling enables exact classification metrics---accuracy, per-class precision, recall, and $F_1$, and a full confusion matrix---against the model's predictions, rather than a sampled estimate.
 
-\paragraph{Manual spot-checks of extraction.} For the extraction steps (Steps~2--3), where exhaustive labelling of every node and edge is infeasible, a random sample of approximately 30 plans is reviewed by the author, who compares each extracted graph against the original image and records missing nodes, spurious nodes, incorrect connections, and incorrect room types. This yields an approximate accuracy estimate that, while not a substitute for full ground truth, provides a credible lower bound on extraction reliability.
+\paragraph{Manual Spot-Check Evaluation.} Following the automated structural validation, a random sample of 30 structurally valid graphs was manually reviewed by the author to assess strict semantic accuracy. Each extracted graph was directly cross-referenced against its original raster image to identify latent errors, specifically recording missing nodes, spurious nodes, incorrect topological edges, and erroneous room inventories. While this sample size does not replace full dataset ground truth, it provides a highly credible estimate of semantic reliability and establishes a definitive lower bound for the pipeline's end-to-end extraction fidelity.
 
 
 
@@ -509,7 +575,7 @@ This chapter documents the engineering decisions that translate the methodology 
 \section{Model Selection}
 \label{sec:model_selection}
 
-Three critical constraints governed the selection of the Vision-Language Model (VLM): (i) \emph{open weights}, ensuring scientific reproducibility and eliminating the financial and latency overhead of commercial cloud APIs across thousands of inference steps; (ii) \emph{native multi-image support}, an absolute prerequisite for few-shot visual in-context learning; and (iii) \emph{deployability within a 16\,GB VRAM footprint}, matching the capacity of the remote NVIDIA RTX A5000 server available for full-dataset processing.
+Three critical constraints governed the selection of the Vision-Language Model (VLM): (i) \emph{open weights}, ensuring scientific reproducibility and eliminating the financial and latency overhead of commercial cloud APIs across thousands of inference steps; (ii) \emph{native multi-image support}, an absolute prerequisite for few-shot visual in-context learning; and (iii) \emph{deployability within a 24\,GB VRAM footprint}, matching the capacity of the remote NVIDIA RTX A5000 server available for full-dataset processing.
 
 Within these rigid constraints, the Qwen3-VL family was prioritized over alternatives such as LLaVA, InternVL, and BLIP-2 for two primary reasons. First, Qwen3-VL demonstrates state-of-the-art performance on document-understanding benchmarks (e.g., DocVQA, ChartQA). This capability is paramount given the high density of textual abbreviations and dimensional annotations embedded within social-housing blueprints. Second, it natively processes interleaved multi-image inputs, whereas several competing architectures require the delicate and computationally inefficient concatenation of multiple images into a single visual canvas.
 
@@ -520,7 +586,7 @@ To facilitate both iterative development and large-scale extraction, two specifi
     \item[Qwen3-VL-8B-Instruct] ($\approx$ 16\,GB in \texttt{bfloat16}) --- deployed for the final production inference on the remote NVIDIA RTX A5000. Its expanded parameter capacity yields significantly higher reliability when extracting edge cases, such as plans with rotated text labels or partially occluded architectural elements.
 \end{description}
 
-A larger Mixture-of-Experts (MoE) variant, Qwen3-VL-30B-A3B-Instruct-FP8, was evaluated but ultimately rejected. Although its 3B active-parameter inference footprint appears theoretically viable, the entire 30B parameter set must still reside in VRAM. Furthermore, FP8 precision compute is strictly restricted to Hopper and Ada Lovelace microarchitectures. The A5000 supports neither of these requirements, rendering the 30B MoE model untenable for this hardware environment.
+A larger Mixture-of-Experts (MoE) variant, Qwen3-VL-30B-A3B-Instruct-FP8, was evaluated but ultimately rejected. Although its 3B active-parameter inference footprint appears theoretically viable, the entire 30B parameter set must still reside in VRAM. Furthermore, FP8 precision compute is strictly restricted to Hopper and Ada Lovelace microarchitectures~\cite{vllm_fp8_w8a8}. The A5000 supports neither of these requirements, rendering the 30B MoE model untenable for this hardware environment.
 
 \section{Inference Infrastructure}
 
@@ -546,7 +612,7 @@ The codebase, publicly available as an open-source repository (Appendix~\ref{app
     \item \code{src/vlm\_client.py} --- the \code{VLMClient} wrapper.
     \item \code{src/step1\_classify.py} through \code{src/step6\_stack3d.py} --- one module per pipeline step, each exposing both a single-image function and a batch function.
     \item \code{src/pipeline.py} --- command-line orchestrator that composes the six steps and writes outputs to disk.
-    \item \code{src/utils/json\_parser.py} --- robust \textit{JSON} extractor that tolerates the additional prose VLMs sometimes emit before or after the JSON block.
+    \item \code{src/utils/json\_parser.py} --- robust \textit{JSON} extractor that tolerates the additional prose VLMs sometimes emit before or after the \textit{JSON} block.
     \item \code{src/utils/visualization.py} --- NetworkX-based graph rendering for visual quality assurance.
     \item \code{prompts/*.txt} --- prompt templates kept outside the code so that they can be edited without re-deploying the pipeline.
 \end{itemize}
@@ -608,24 +674,24 @@ targets; individual and other plans carry no multi-unit graph.}
 \label{tab:dataset-dist}
 \end{table}
 
-\paragraph{Evaluation scope.} We evaluate the three VLM-driven extraction stages that determine output quality --- classification (Step~1), aggregation analysis (Step~2), and apartment detailing (Step~3) --- following the validation strategy of Section~\ref{sec:validation}.
+\paragraph{Evaluation Scope.} We evaluate the three VLM-driven extraction stages that determine output quality---classification (Step~1), aggregation analysis (Step~2), and apartment detailing (Step~3)---following the validation strategy of Section~\ref{sec:validation}.
 
-\paragraph{Ground-truth construction.} Two evaluation references were built by the author. For \textbf{Step~1}, all 1{,}276 plans were manually labelled with their true class, applying the rule that a plan is \textit{aggregation} only if it contains two or more self-contained dwellings sharing a vertical-circulation core; side-by-side unit typologies (e.g., ``Tipus A / Tipus B'' catalogues) are
-\textit{individual}, and non-dwelling drawings are \textit{other}. This exhaustive labelling permits exact classification metrics rather than a sampled estimate. For \textbf{Steps~2--3}, where node- and edge-level labelling of every graph is infeasible, a random spot-check of approximately 30 aggregation plans was reviewed against the source images.
+\paragraph{Ground-Truth Construction.} Two evaluation references were built by the author. For \textbf{Step~1}, all 1{,}276 plans were manually labelled with their true class, applying the rule that a plan is \textit{aggregation} only if it contains two or more self-contained dwellings sharing a vertical-circulation core; side-by-side unit typologies (e.g., ``Tipus A / Tipus B'' catalogues) are
+\textit{individual}, and non-dwelling drawings are \textit{other}. This exhaustive labelling permits exact classification metrics rather than a sampled estimate. For \textbf{Steps~2--3}, where node- and edge-level labelling of every graph is infeasible, a random spot-check of 30 plans---drawn from those that passed the Step~4 structural validation---was reviewed against the source images (27 of the 30 proved to be true aggregations).
+
 
 \paragraph{Metrics.} Step~1 is reported with a full classification report (accuracy, per-class precision, recall, and $F_1$) and a confusion matrix. 
 Steps~2--3 are assessed through the six deterministic structural checks of Section~\ref{sec:assembly} (yielding a per-graph pass rate and mean quality score) and the spot-check error categories: missing nodes, spurious nodes, incorrect connections, and incorrect room types.
 
-\paragraph{Outcome taxonomy.} Each plan routed into extraction ends in exactly one of three states, used consistently throughout this chapter:
-\begin{description}
-    \item[Passing.] A graph was produced and satisfied all hard structural checks.
-    \item[Flagged (soft).] A graph was produced but failed a soft check (missing
-    or unreachable vertical circulation) and is routed to human review.
-    \item[Extraction failure.] The model produced no parseable graph; no JSON exists, and the case is logged separately.
-\end{description}
+\paragraph{Outcome Taxonomy.} Each plan routed into extraction ends in exactly one of three states, used consistently throughout this chapter:
+\begin{itemize}
+    \item \textbf{Passing.} A graph was produced and satisfied all hard structural checks.
+    \item \textbf{Flagged (soft).} A graph was produced but failed a soft check (missing or unreachable vertical circulation) and is routed to human review.
+    \item \textbf{Extraction Failure.} The model produced no parseable graph; no \textit{JSON} exists, and the case is logged separately.
+\end{itemize}
 
 \noindent The model and hardware experimental settings are detailed in
-Sections~\ref{sec:model_selection} and~\ref{sec:hardware_and_deploy}; briefly, the \mbox{Qwen3-VL-8B-Instruct} model (roughly 16GB in \code{bfloat16}) is used, running on an NVIDIA RTX A5000 GPU with 24GB of VRAM.
+Sections~\ref{sec:model_selection} and~\ref{sec:hardware_and_deploy}; briefly, the \textbf{Qwen3-VL-8B-Instruct} model (roughly 16GB in \code{bfloat16}) is used, running on an \textbf{NVIDIA RTX A5000 GPU with 24GB of VRAM}.
 
 
 \section{Classification Performance (Step 1)}
@@ -677,6 +743,35 @@ Other       & 0 & 1 & \textbf{0} \\
 
 \paragraph{Verification of Determinism.} In strict adherence to the reproducibility principles outlined in Section~\ref{sec:reproducibility}, Step~1 utilizes greedy decoding mechanisms. Consequently, these classification metrics are fully deterministic; re-executing the classifier yields identical categorical labels across the entire corpus without probabilistic variance.
 
+\paragraph{Misclassified Examples.} Figure~\ref{fig:misclassified} illustrates representative errors for the three off-diagonal confusion matrix directions. Panel~(a) (\texttt{ibavi\_17.jpg}) demonstrates the dominant error mode: a true \textit{individual} plan misclassified as \textit{aggregation} because it is a typology catalogue displaying multiple distinct units on a single sheet. Panel~(b) (\texttt{IMP\_155.jpg}) shows an \textit{aggregation} misread as \textit{individual} due to a faint, visually illegible shared circulation core. Finally, panel~(c) (\texttt{IMP\_301.jpg}) features an \textit{individual} dwelling erroneously flagged as \textit{other} because the model failed to recognize its habitable rooms. A broader gallery with several plans per error direction is provided in Appendix~\ref{appendix:misclassified-extra}.
+
+\begin{figure}
+\centering
+\begin{minipage}[t]{0.32\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/ibavi_17.jpg}
+  \par\smallskip
+  {\footnotesize (a) \code{ibavi\_17.jpg}: \textit{individual}
+  $\rightarrow$ \textit{aggregation}.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_155.jpg}
+  \par\smallskip
+  {\footnotesize (b) \code{IMP\_155.jpg}: \textit{aggregation}
+  $\rightarrow$ \textit{individual}.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_301.jpg}
+  \par\smallskip
+  {\footnotesize (c) \code{IMP\_301.jpg}: \textit{individual}
+  $\rightarrow$ \textit{other}.}
+\end{minipage}
+\caption{Representative Step~1 misclassifications, one per off-diagonal direction of the confusion matrix (Table~\ref{tab:confusion}). (a) A typology catalogue presenting several unit types side-by-side, read as a multi-unit floor (the dominant error). (b) An aggregation plan whose shared circulation core is faint or label-sparse, read as a single dwelling. (c) An individual plan mistaken for a non-dwelling \textit{other} drawing.}
+\label{fig:misclassified}
+\end{figure}
+
 
 \section{2D Extraction Quality (Steps 2--3)}
 \label{sec:exp-extraction}
@@ -705,18 +800,94 @@ Across the 691 extracted graphs, \textbf{623 (90.2\,\%) pass all hard structural
 \label{tab:val-rules}
 \end{table}
 
+\noindent Figure~\ref{fig:check-failures} illustrates representative failures for each of the six structural validation checks, displaying the original raster floor plan alongside the pipeline's extracted graph topology. The specific failure modes are analyzed below:
+
+\begin{itemize}
+    \item \textbf{Minimum Apartment Threshold} (\texttt{has\_apartments}). Panel (a) shows a genuine two-apartment aggregation plan lacking explicit vertical circulation cores. However, the model hallucinates a shared node and merges the layout into a single apartment. This visual misinterpretation is triggered by an ambiguous square architectural artifact adjacent to the entrance of Apartment B, causing the resulting graph to fail the strict minimum-apartment requirement.
+
+    \item \textbf{Global Connectivity} (\texttt{all\_connected}). Panel (b) illustrates a two-apartment aggregation plan. Here, the VLM incorrectly extracts two disconnected sub-graphs. It misclassifies a central bathroom as a shared vertical core (staircase and elevator) and subsequently splits the surrounding rooms into separate, localized dwellings. This topological fragmentation violates the strict global connectivity constraint.
+
+    \item \textbf{Local Node Connectivity} (\texttt{no\_isolated\_apt}). Panel (c) features an \textit{individual} dwelling that was erroneously misclassified as an \textit{aggregation} layout during Step 1. Because it is natively a single-unit plan, it lacks the shared corridors necessary to form topological edges with other units. This results in a completely isolated apartment node, correctly triggering this strict failure constraint.
+
+    \item \textbf{Vertical Circulation Presence} (\texttt{has\_connectors}). Panel (d) displays a valid aggregation plan where the model completely fails to detect any staircases or elevators. Consequently, the assembled graph lacks vertical circulation nodes, failing this diagnostic check and automatically flagging the plan for human review.
+    
+    \item \textbf{Circulation Reachability} (\texttt{every\_apt\_reaches\_connector}). Panel (e) shows an aggregation plan natively lacking explicit vertical circulation in the drawing. In this instance, the model refuses to hallucinate imaginary staircases or elevators. However, because no vertical cores exist, the extracted apartments cannot establish a reachability path, rightfully triggering this diagnostic indicator so a human reviewer can verify the unusual layout.
+    
+    \item \textbf{Spatial Uniqueness} (\texttt{no\_dup\_position}). Panel (f) illustrates a coordinate extraction error. While the VLM correctly identifies both the elevator and the staircase, it collapses their topological bounding boxes into the exact same $[x, y]$ spatial coordinate. In the original raster image, the elevator is clearly situated opposite the staircase, meaning this coordinate duplication flags a soft spatial reasoning failure.
+
+\end{itemize}
+
+
+\begin{figure}
+\centering
+\begin{minipage}[t]{0.48\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_810_aggregation.png}
+  \par\smallskip
+  {\footnotesize (a) \code{has\_apartments} (hard): fewer than two apartment nodes were extracted.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/ibavi_28_aggregation.png}
+  \par\smallskip
+  {\footnotesize (b) \code{all\_connected} (hard): the graph splits into two disconnected components.}
+\end{minipage}
+
+\smallskip
+
+\begin{minipage}[t]{0.48\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_05_aggregation.png}
+  \par\smallskip
+  {\footnotesize (c) \code{no\_isolated\_apt} (hard): an apartment node carries no edge to any other node.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_98_aggregation.png}
+  \par\smallskip
+  {\footnotesize (d) \code{has\_connectors} (soft): no staircase or elevator node was identified.}
+\end{minipage}
+
+\smallskip
+
+\begin{minipage}[t]{0.48\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_243_aggregation.png}
+  \par\smallskip
+  {\footnotesize (e) \code{every\_apt\_reaches\_connector} (soft): an apartment
+  cannot reach any vertical-circulation node.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/ibavi_25_aggregation.png}
+  \par\smallskip
+  {\footnotesize (f) \code{no\_dup\_positions} (soft): two nodes are assigned the
+  same $[x, y]$ coordinate.}
+\end{minipage}
+\caption{One representative failing graph for each of the six deterministic
+structural checks (Table~\ref{tab:val-rules}). Each panel pairs the source floor
+plan with the extracted graph: apartment nodes in blue, staircases in red, and
+elevators in orange. Panels (a), (b), (d), (e), and (f) are true
+\textit{aggregation} plans, so their failures arise during extraction. Panel~(c)
+is a true \textit{individual} plan: no genuine aggregation in the corpus triggers
+\code{no\_isolated\_apt}, and all three of its failures occur on misclassified
+individual plans, reinforcing that empty or degenerate graphs originate upstream
+in classification (Section~\ref{sec:exp-extraction}).}
+\label{fig:check-failures}
+\end{figure}
+
 \subsection{Analysis of the Failure Counts}
 
-\paragraph{Duplicate positions are the most frequent but least severe issue.}
+\paragraph{Duplicate Positions are the Most Frequent but Least Severe Issue.}
 The most common flag, \code{no\_dup\_positions} (162 graphs), is a \emph{soft} check: it fires whenever two nodes are assigned the same $[x, y]$ percentage coordinate. This reflects coordinate imprecision in the model's spatial estimates---two apartments placed at the same point---rather than a topological error, and does not by itself invalidate a graph.
 
-\paragraph{Connectivity failures are the main driver of non-passing graphs.}
+\paragraph{Connectivity Failures are the Main Driver of Non-Passing Graphs.}
 The \code{all\_connected} check fails on 65 graphs---the dominant \emph{hard} failure. These are graphs that split into more than one connected component, typically because an apartment (or a connector) was extracted but its edge to the shared circulation was not traced. This is the failure mode the no-fabrication edge rule (Section~\ref{sec:assembly}) deliberately tolerates: the model is
 instructed to omit an edge it cannot see rather than invent one, so genuinely untraceable connections surface here as disconnections rather than as hallucinated edges.
 
-\paragraph{Empty graphs reflect upstream misclassification.} The 28 graphs that fail \code{has\_apartments} (fewer than two apartment nodes) coincide with the 28 that fail \code{has\_connectors} and \code{every\_apt\_reaches\_connector}:
-these are near-empty graphs produced from plans that are not genuine
-aggregations. Manual inspection confirms they are predominantly the typology catalogues misclassified in Step~1 (Section~\ref{sec:exp-classification}); the extraction model correctly declines to fabricate apartments, emitting an empty or near-empty graph instead. The failure therefore originates in classification, not extraction---a point developed in Section~\ref{sec:exp-failure}.
+\paragraph{Empty Graphs Reflect Upstream Misclassification.} The 28 graphs that fail \code{has\_apartments} (fewer than two apartment nodes) largely overlap with the 28 that fail \code{has\_connectors} and \code{every\_apt\_reaches\_connector}: the three sets happen to be equal in number and share most of their members.
+Most are near-empty graphs produced from plans that are not genuine
+aggregations---predominantly the typology catalogues misclassified in Step~1 (Section~\ref{sec:exp-classification}), where the extraction model correctly declines to fabricate apartments and emits an empty or near-empty graph instead; for these, the failure originates in classification, not extraction (a point developed in Section~\ref{sec:exp-failure}). A few cases differ, however: a small number of genuine multi-apartment graphs fail only the connector checks because their vertical core was not detected, rather than failing \code{has\_apartments}. These are true aggregations with a missing circulation node---exactly the case the human-in-the-loop review (Section~\ref{sec:exp-hitl}) is designed to repair.
 
 \paragraph{Summary.} Excluding the empty graphs caused by upstream
 misclassification, the extraction stage produces structurally valid 2D graphs for the large majority of true aggregation plans, and its errors are dominated by missing edges (conservative under-connection) rather than fabricated structure.
@@ -727,9 +898,9 @@ misclassification, the extraction stage produces structurally valid 2D graphs fo
 The structural checks of Section~\ref{sec:exp-extraction} verify topological plausibility but cannot confirm \emph{semantic} correctness---a graph may be well-formed yet miscount apartments, hallucinate a connector, or assign the wrong room inventory. To assess this, a stratified random sample of 30 plans whose graphs passed the structural checks was reviewed against the source images, recording, per graph, the number of missing nodes, spurious nodes,
 incorrect edges, and apartments with an incorrect room inventory.
 
-Of the 30 sampled plans, 7 are revealed by the review to be \emph{not} genuine aggregations: they were misclassified in Step~1 (predominantly typology catalogues, Section~\ref{sec:exp-classification}) yet still produced a structurally valid graph, and are therefore semantic failures by construction. The remaining 23 plans are true aggregations and form the basis of the extraction-quality figures below.
+Of the 30 sampled plans, 3 are revealed by the review to be \emph{not} aggregations: they were misclassified in Step~1 (predominantly typology catalogues, Section~\ref{sec:exp-classification}) yet still produced a structurally valid graph, and are therefore semantic failures by construction. The remaining 27 plans are true aggregations and form the basis of the extraction-quality figures below.
 
-\paragraph{Overall correctness.} Among the 23 true-aggregation graphs, only 3 (13\,\%) were judged \emph{fully correct}---a faithful node-for-node and edge-for-edge match to the plan. The remaining 20 contained at least one semantic error invisible to the structural checks. Table~\ref{tab:spotcheck} breaks these errors down by category.
+\paragraph{Overall Correctness.} Among the 27 true-aggregation graphs, only 3 (11.1\,\%) were judged \emph{fully correct}---a faithful node-for-node and edge-for-edge match to the plan. The remaining 24 (88.9\,\%) contained at least one semantic error invisible to the structural checks. Table~\ref{tab:spotcheck} breaks these errors down by category.
 
 \begin{table}[ht]
 \centering
@@ -737,32 +908,80 @@ Of the 30 sampled plans, 7 are revealed by the review to be \emph{not} genuine a
 \toprule
 \textbf{Error category} & \textbf{Graphs affected} & \textbf{Total instances} \\
 \midrule
-Missing nodes (apartments / connectors) & 10 (43\,\%) & 18 \\
-Spurious nodes                          & 15 (65\,\%) & 24 \\
-Incorrect edges                         & 2 (9\,\%)   & 12 \\
-Incorrect room inventory                & 5 (22\,\%)  & 15 \\
+Missing nodes (apartments / connectors) & 11 (40.7\,\%) & 20 \\
+Spurious nodes                          & 18 (66.7\,\%) & 32 \\
+Incorrect edges                         & 3 (11.1\,\%)  & 18 \\
+Incorrect room inventory                & 6 (22.2\,\%)  & 20 \\
 \bottomrule
 \end{tabular}
-\caption{Semantic error rates over the 23 true-aggregation graphs in the spot-check sample. ``Graphs affected'' counts graphs with at least one error of that category; ``total instances'' sums the errors across all graphs. A graph may exhibit several categories, so the rows are not mutually exclusive.}
+\caption{Semantic error rates over the 27 true-aggregation graphs in the spot-check sample. ``Graphs affected'' counts graphs with at least one error of that category; ``total instances'' sums the errors across all graphs. A graph may exhibit several categories, so the rows are not mutually exclusive.}
 \label{tab:spotcheck}
 \end{table}
 
-\paragraph{Node counting is the dominant error.} The review confirms that the model's principal weakness is \emph{counting apartments}, not connecting them: spurious nodes affect 65\,\% of graphs and missing nodes 43\,\%, whereas incorrect edges are rare (9\,\%). The error is bidirectional---the model both over-counts (\eg, splitting a service space or a public zone into extra apartments) and under-counts (\eg, merging or omitting units on dense, radial, or row layouts). In several cases the model's own \code{building\_analysis} field states a different apartment count from the one it ultimately emits, exposing an internal inconsistency. The scarcity of edge errors is a direct consequence of the no-fabrication rule (Appendix~\ref{appendix:prompt-aggregation}): once nodes are placed, the hub-and-spoke wiring to the core is usually correct.
+\paragraph{Node Counting is the Dominant Error.} The review confirms that the model's principal weakness is \emph{counting apartments}, not connecting them: spurious nodes affect 66.7\,\% of graphs and missing nodes 40.7\,\%, whereas incorrect edges are rare (11.1\,\%). The error is bidirectional---the model both over-counts (\eg, splitting a service space or a public zone into extra apartments) and under-counts (\eg, merging or omitting units on dense, radial, or row layouts). In several cases the model's own \code{building\_analysis} field states a different apartment count from the one it ultimately emits, exposing an internal inconsistency. The scarcity of edge errors is a direct consequence of the no-fabrication rule (Appendix~\ref{appendix:prompt-aggregation}): once nodes are placed, the hub-and-spoke wiring to the core is usually correct.
 
-\paragraph{Room inventory and connectors.} Incorrect room inventories appear in 22\,\% of graphs, typically a bedroom count that contradicts the plan's typology legend (\eg, a ``3D'' three-bedroom type extracted with two bedrooms). Connector errors---a missing elevator, or an elevator hallucinated where the plan shows only a stair or a central distributor---account for part of the node errors above and recur on plans whose vertical circulation is drawn ambiguously.
+\paragraph{Room Inventory and Connectors.} Incorrect room inventories appear in 22.2\,\% of graphs, typically a bedroom count that contradicts the plan's typology legend (\eg, a ``3D'' three-bedroom type extracted with two bedrooms). Connector errors---a missing elevator, or an elevator hallucinated where the plan shows only a stair or a central distributor---account for part of the node errors above and recur on plans whose vertical circulation is drawn ambiguously.
 
-\paragraph{Interpretation.} The 13\,\% fully-correct rate should be read against the strictness of the criterion: a single miscounted apartment marks an entire graph as not fully correct, even when the connectivity and the majority of nodes are right. The structural pass rate of Section~\ref{sec:exp-extraction} (90.2\,\%) and this semantic rate are therefore complementary: the pipeline reliably produces \emph{well-formed} graphs, but exact node-level fidelity on dense or legend-driven plans remains the principal open challenge, and is the main target of the human-in-the-loop refinement evaluated next.
+\paragraph{Interpretation.} The 11.1\,\% fully-correct rate should be read against the strictness of the criterion: a single miscounted apartment marks an entire graph as not fully correct, even when the connectivity and the majority of nodes are right. The structural pass rate of Section~\ref{sec:exp-extraction} (90.2\,\%) and this semantic rate are therefore complementary: the pipeline reliably produces \emph{well-formed} graphs, but exact node-level fidelity on dense or legend-driven plans remains the principal open challenge, and is the main target of the human-in-the-loop refinement evaluated next.
+
+\vspace{8mm}
+\noindent Figure~\ref{fig:spotcheck-examples} highlights representative examples from the manual qualitative review, detailing the four primary topological extraction failure modes encountered by the pipeline. It should be noted that while a single raster plan may exhibit multiple compounded errors, the analysis for each panel deliberately isolates and focuses on one specific target failure mode for analytical clarity.
+
+\begin{itemize}
+    \item \textbf{Missing Nodes.} Panel~(a) illustrates a severe under-counting error. While the raster plan clearly depicts nine distinct apartments, the Vision-Language Model (VLM) only successfully extracts six, entirely omitting the remaining three units from the generated graph.
+    \item \textbf{Spurious Nodes.} Panel~(b) demonstrates the hallucination of non-existent residential units. The original architectural layout contains exactly two apartments (located horizontally from one another). However, the model incorrectly classifies two non-residential storage spaces as independent dwellings, yielding a flawed graph with four apartment nodes.
+    \item \textbf{Incorrect Edges.} Panel~(c) features a multi-floor sheet, displaying two distinct building levels on a single page. Because the pipeline natively assumes a single contiguous floor layout per image, the model fails to semantically segment the drawing. Consequently, it hallucinates a completely invalid edge topology by connecting nodes across physically separate floors.
+    \item \textbf{Incorrect Room Inventory.} Panel~(d) showcases a compounded failure at both the macro and micro extraction levels. At the macro level, the model erroneously predicts eight apartments instead of the true four by misinterpreting thick partition walls as separate dwellings. At the micro level (internal detailing), it populates an incorrect room inventory, predicting two bedrooms per apartment when the visual evidence strictly presents one. The resulting structurally flawed \textit{JSON} artifact is documented in Appendix~\ref{appendix:incorrect_room}.
+\end{itemize}
+
+
+\begin{figure}
+\centering
+\begin{minipage}[t]{0.44\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_104_aggregation.png}
+  \par\smallskip
+  {\footnotesize (a) \code{IMP\_104.jpg} --- \emph{missing nodes}: a nine-apartment block from which only six dwellings are extracted, leaving three apartments unrecovered.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.44\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_106_aggregation.png}
+  \par\smallskip
+  {\footnotesize (b) \code{IMP\_106.jpg} --- \emph{spurious nodes}: a two-apartment plan extracted as four, the model promoting two storage spaces to dwellings.}
+\end{minipage}
+
+\smallskip
+
+\begin{minipage}[t]{0.44\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_175_aggregation.png}
+  \par\smallskip
+  {\footnotesize (c) \code{IMP\_175.jpg} --- \emph{missing nodes, spurious nodes, and incorrect edges}: a single sheet holding two floors (P5--P8 and P2--P4) is merged into one graph, the second core dropped and its apartments mis-wired to the first, since the pipeline assumes one floor per image.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.44\textwidth}
+  % \centering
+  \includegraphics[width=\linewidth]{figures/examples/ibavi_33_aggregation.png}
+  \par\smallskip
+  {\footnotesize (d) \code{ibavi\_33.jpg} --- \emph{spurious nodes and incorrect room inventory}: a four-apartment plan extracted as eight, with single-bedroom dwellings reported as two-bedroom.}
+\end{minipage}
+\caption{Further representative semantic errors from the spot-check
+(Table~\ref{tab:spotcheck}), invisible to the structural checks. Each panel pairs the source floor plan with the extracted graph (apartments in blue, staircases in red, elevators in orange): (a) an under-counted block (missing nodes); (b) storage spaces over-counted as dwellings (spurious nodes); (c) a two-floor sheet collapsed into a single graph (incorrect edges); (d) a doubled apartment count compounded by a bedroom-inventory error (spurious nodes and incorrect room inventory).}
+\label{fig:spotcheck-examples}
+\end{figure}
+
 
 
 \section{Human-in-the-Loop Refinement (Step 5)}
 \label{sec:exp-hitl}
 
-This section evaluates the human-in-the-loop review that follows Step~4. The validation stage flagged 28 graphs as needing review (missing or unreachable vertical circulation). However, as established in Sections~\ref{sec:exp-classification} and~\ref{sec:exp-spotcheck}, the large majority of these flags are not extraction errors but \emph{upstream misclassifications}: typology catalogues and single dwellings wrongly routed into extraction, which the model had correctly emptied. Of the 28 flagged graphs, only \textit{inca\_555.jpg} was a correct aggregation whose graph warranted correction; the remainder were skipped during the interactive session as they carry no real building structure to refine.
+This section evaluates the outcomes of the Human-in-the-Loop (HITL) refinement stage (Step~5). The automated structural validation routed 28 graphs to the interactive review queue due to diagnostic indicator failures (specifically, missing or unreachable vertical circulation). However, consistent with the error distribution analyzed in Sections~\ref{sec:exp-classification} and~\ref{sec:exp-spotcheck}, the vast majority of these flagged instances were not extraction failures, but rather upstream classification errors. Specifically, 27 of the 28 images were typology catalogues or individual dwellings erroneously categorized as aggregations in Step~1. In these cases, the Vision-Language Model correctly refrained from hallucinating non-existent vertical cores, rightfully triggering the diagnostic flags. Consequently, only a single genuine aggregation plan (\texttt{inca\_555.jpg}) necessitated manual correction during the interactive session; the remaining 27 were bypassed, as they lacked the genuine multi-unit architectural topology required for refinement.
+
+It is important not to conflate this review queue with the semantic spot-check of Section~\ref{sec:exp-spotcheck}. These 28 graphs are exactly those that \emph{failed} the automated diagnostic checks; the spot-check instead samples 30 graphs from those that \emph{passed} every structural check, so the two sets are disjoint. The two stages also run in sequence: the automated validation comes first and can only detect topological defects (missing or unreachable circulation), whereas the semantic errors counted in the spot-check---miscounted apartments, wrong room inventories---are invisible to those checks and therefore never trigger this review queue. This is precisely why the 24 of 27 spot-checked aggregation graphs carrying semantic errors do \emph{not} appear here: structurally they are valid, so the pipeline never flags them for refinement.
 
 For \textit{inca\_555.jpg}, the initial extraction (Figure~\ref{fig:inca_555}) over-counted the dwellings---emitting eight apartments and two redundant circulation cores (two staircases and two elevators) instead of the five apartments and single core actually present---and left one apartment node disconnected from any connector. The model had been misled by the plan's typology legend, interpreting the per-type unit totals (6/13/13 \emph{unitats})
 as separate apartments.
 
-The architect supplied the following corrective hint:
+The reviewer supplied the following corrective hint:
 
 \begin{quote}\itshape
 This is a single type-floor. There are exactly 5 apartments around the central core: two labelled C (top), two labelled B (middle), one labelled A (bottom). The core has ONE staircase (top) and ONE elevator (the round shaft with a diagonal in the centre). Connect all 5 apartments to the core, and connect the staircase and elevator to each other so nothing is left isolated. Do not count the per-type unit totals (6/13/13) as separate apartments.
@@ -771,14 +990,14 @@ This is a single type-floor. There are exactly 5 apartments around the central c
 After re-extraction with this hint, the graph is fully correct
 (Figure~\ref{fig:inca_555_reviewed}): five apartments (A, B, B, C, C) connected to a single staircase and a single elevator, which are in turn linked to each other, leaving no isolated node. The hint is persisted to the feedback memory (\code{outputs/logs/human\_feedback\_memory.json}) so that it can be prepended to future runs, allowing the model to generalise to similar legend-driven plans without any weight update.
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/examples/inca_555_aggregation.png}
     \caption{\textit{inca\_555.jpg} before review. The model over-counts the dwellings (eight apartments and two redundant cores) and leaves one apartment node disconnected, having interpreted the typology legend's unit totals as individual apartments.}
     \label{fig:inca_555}
 \end{figure}
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.7\linewidth]{figures/examples/inca_555_aggregation_reviewed.png}
     \caption{\textit{inca\_555.jpg} after human-in-the-loop review. The corrected graph contains the five true apartments (A, B, B, C, C) connected to a single staircase--elevator core, with no isolated nodes.}
@@ -792,18 +1011,33 @@ After re-extraction with this hint, the graph is fully correct
 The final step assembles the 3D building graph and its visualisation. For the full corpus, the pipeline applies the default \emph{self-stacking} strategy: each 2D graph is replicated across three floors, and the staircase and elevator of consecutive floors are linked vertically to form the building's circulation core. This is the simplest way to obtain a 3D structure when only a single
 representative floor plan is available, which is the common case in the dataset. Figure~\ref{fig:inca_555_3d} shows such a self-stacked building: a fully connected three-floor graph in which every floor is joined to the next through its staircase and elevator, and each apartment is placed in 3D according to the $(x, y)$ position predicted by the VLM, with the floor index as the vertical axis.
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.45\linewidth]{figures/examples/inca_555_3d.png}
+    \includegraphics[width=0.35\linewidth]{figures/examples/inca_555_3d.png}
     \caption{Self-stacked 3D building graph for \textit{inca\_555.jpg}: the
     reviewed 2D floor replicated across three storeys, with the staircase and elevator linked vertically between consecutive floors. Apartment positions follow the VLM-predicted $(x, y)$ coordinates; the floor index forms the vertical axis.}
     \label{fig:inca_555_3d}
 \end{figure}
 
-Beyond this default behaviour, the same alignment routine also accepts a sequence of \emph{distinct} per-floor graphs, enabling true multi-floor assembly when separate floor plans of one building are available. To demonstrate this, the plans \textit{ibavi\_34} and \textit{ibavi\_35}---the ground floor (\textit{planta baixa}) and first floor (\textit{planta primera}) of the same building, sharing an identical apartment layout---were stacked into a single
+Beyond this default behaviour, the same alignment routine also accepts a sequence of \emph{distinct} per-floor graphs, enabling true multi-floor assembly when separate floor plans of one building are available. To demonstrate this, the plans \textit{ibavi\_34} (Figure \ref{fig:ibavi_34}) and \textit{ibavi\_35} (Figure \ref{fig:ibavi_35})---the ground floor (\textit{planta baixa}) and first floor (\textit{planta primera}) of the same building, sharing an identical apartment layout---were stacked into a single
 two-floor graph (Figure~\ref{fig:ibavi_block_3d}). The two floors align correctly, with the shared staircase linking them vertically and each floor's apartments remaining connected only within their own level.
 
-\begin{figure}[ht]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/examples/ibavi_34_aggregation.png}
+    \caption{\textit{ibavi\_34} (ground floor / \textit{planta baixa}): the original plan and its 2D graph of ten apartments in a row served by a single staircase.}
+    \label{fig:ibavi_34}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/examples/ibavi_35_aggregation.png}
+    \caption{\textit{ibavi\_35} (first floor / \textit{planta primera}): the same building's first floor, with an apartment layout identical to Figure~\ref{fig:ibavi_34}.}
+    \label{fig:ibavi_35}
+\end{figure}
+
+
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.4\linewidth]{figures/examples/ibavi_block_3d.png}
     \caption{Custom two-floor assembly of \textit{ibavi\_34} (ground floor) and
@@ -821,11 +1055,11 @@ This section consolidates every observed failure mode into a single
 view, grouped by \emph{root cause} rather than by pipeline step.
 Table~\ref{tab:failure-modes} lists each mode, the stage it originates in, and the section in which it is quantified.
 
-Two observations follow directly from this grouping. First, the failures separate cleanly into two families by where they originate: those rooted in \emph{classification} (typology catalogues and multi-floor sheets), in which a plan is wrongly admitted into extraction, and those rooted in \emph{extraction} (apartment counting, ambiguous circulation, coordinate imprecision, and the hard failures), which arise once an authetic aggregation plan is being processed.
+Two observations follow directly from this grouping. First, the failures separate cleanly into two families by where they originate: those rooted in \emph{classification} (typology catalogues and multi-floor sheets), in which a plan is wrongly admitted into extraction, and those rooted in \emph{extraction} (apartment counting, ambiguous circulation, coordinate imprecision, and the hard failures), which arise once an authentic aggregation plan is being processed.
 
 Second, the no-fabrication edge rule determines how the extraction-rooted errors manifest: rather than inventing plausible-but-wrong connections, the model leaves uncertain links unmade, so its errors appear as conservative disconnections that the automated checks detect, rather than as silent topological corruption. The implications of these failure modes, and the directions they suggest for future work, are discussed in Chapter~\ref{ch:discussion}.
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{@{}p{6.0cm}cc@{}}
@@ -844,6 +1078,114 @@ Hard extraction failures (no parseable graph)        & Step 2     & Sec.~\ref{se
 \label{tab:failure-modes}
 \end{table}
 
+
+\section{End-to-End Summary}
+\label{sec:exp-summary}
+
+The preceding sections evaluated each stage in isolation. This section
+consolidates them into a single end-to-end view: of all the plans the system \emph{receives}, what fraction does it \emph{process correctly}? Because the pipeline is a cascade---a plan must first be admitted by classification and then survive extraction---the overall success rate is the product of the per-stage rates, and a plan wrongly rejected or wrongly admitted upstream can never be recovered downstream.
+
+\paragraph{Plans Surviving each Sequential Step.} Because the pipeline is a strict cascade, the most direct way to read its end-to-end behaviour is to count the plans that actually \emph{reach and pass} each step, starting from the full corpus (Table~\ref{tab:stepfunnel}). Each step operates only on the plans passed on by the previous one. Of the 1,276 plans received, Step~1 routes 702 (those predicted \textit{aggregation}) into extraction and skips the remaining 574 (\textit{individual} or \textit{other}). Steps~2--3 produce a parseable graph for 691 of those 702 (11 are hard extraction failures). Step~4 validates all 691 and 623 pass every hard structural check, while 28 are flagged for the optional
+human-in-the-loop review (Step~5). Step~6 then stacks every available graph into a 3D building, since validation reports but does not gate the pipeline (Section~\ref{sec:exp-3d}).
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}llrr@{}}
+\toprule
+\textbf{Step} & \textbf{Stage} & \textbf{Plans in} & \textbf{Pass/Continue} \\
+\midrule
+1 & Classification             & 1{,}276 & 702 \\
+2--3 & Aggregation + detailing & 702 & 691 \\
+4 & Structural validation      & 691 & 623 \\
+5 & Human-in-the-loop (opt.)   & 28  & --- \\
+6 & 3D stacking                & 691 & 691 \\
+\bottomrule
+\end{tabular}
+\caption{Plans flowing through each sequential step of the pipeline, over the
+full 1{,}276-plan corpus. \textbf{Step~1} passes the 702 plans predicted
+\textit{aggregation} (574 \textit{individual}/\textit{other} plans are skipped).
+\textbf{Steps~2--3} yield 691 parseable graphs (11 hard extraction failures).
+\textbf{Step~4} reports 623 graphs passing all hard checks and flags 28 for
+review, but does not gate the flow. \textbf{Step~5} processes only the 28
+flagged graphs and is optional (run with \code{--review}). \textbf{Step~6}
+stacks every available graph. The ``pass / continue'' column for Step~6 equals
+its input because validation never removes a graph from the pipeline.}
+\label{tab:stepfunnel}
+\end{table}
+
+\paragraph{End-to-end success rate.} Re-expressing this cascade as a quality
+rate over the plans the system is \emph{meant} to handle---the 665 true
+aggregations---the two automated gates compose multiplicatively: a 93.8\,\%
+classification recall (Section~\ref{sec:exp-classification}) followed by a
+90.2\,\% structural pass rate (Section~\ref{sec:exp-extraction}) yields an
+estimated \textbf{84.6\,\%} ($0.938 \times 0.902$) of true aggregation plans
+turned into a well-formed graph. This is a \emph{conservative} estimate: the
+90.2\,\% is measured over all 691 predicted-aggregation graphs and is therefore
+diluted by misclassified non-aggregations that fail validation by construction,
+so the true aggregations alone plausibly pass at a higher rate.
+
+\paragraph{Structural versus semantic success.} The 84.6\,\% figure measures
+\emph{structural} correctness: the graph is well-formed and passes every hard
+check. It does not guarantee that every apartment was counted exactly, which is
+the stricter bar of the manual spot-check (Section~\ref{sec:exp-spotcheck}),
+where only a minority of graphs were judged a perfect node-for-node match. The
+two numbers are complementary: the pipeline reliably produces \emph{usable,
+well-formed} graphs for the large majority of the plans it is meant to handle,
+while exact node-level fidelity on dense or legend-driven layouts remains the
+principal open challenge and the main target of the human-in-the-loop stage.
+
+Crucially, the structural rate (84.6\,\%) and the semantic rate are measured at
+\emph{different stages, on different sets of graphs}. The automated validation
+(Step~4) runs first over all extracted graphs and gives the structural figure;
+the semantic spot-check (Section~\ref{sec:exp-spotcheck}) runs afterwards on a
+random sample of 30 graphs drawn only from those that \emph{passed} that
+validation. The two are therefore not competing estimates of the same quantity
+but successive, stricter filters. Combining them gives the realistic end-to-end
+picture: of every 100 true aggregation plans entering the pipeline, roughly 85
+yield a structurally valid graph, and of those, the spot-check suggests only
+about one in nine is additionally a flawless node-for-node match---so on the
+order of \textbf{10\,\%} are correct in the strict semantic sense, while the
+large remainder are structurally sound graphs needing only minor node-count
+corrections. This strict figure is a lower bound, set by a deliberately
+unforgiving criterion in which a single miscounted apartment fails an entire
+graph.
+
+\paragraph{Successful end-to-end extractions.} To balance the error-focused
+figures of the previous sections, Figure~\ref{fig:successes} shows three plans
+that traverse the entire pipeline without error: each is correctly classified
+as an aggregation, every apartment and circulation core is recovered, and the
+resulting graph is both structurally valid and a faithful node-for-node match
+to the drawing. These are the spot-check plans judged \emph{fully correct}
+(Section~\ref{sec:exp-spotcheck}).
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.32\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/ibavi_34_aggregation.png}
+  \par\smallskip
+  {\footnotesize (a) \code{ibavi\_34.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_486_aggregation.png}
+  \par\smallskip
+  {\footnotesize (b) \code{inca\_486.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_844_aggregation.png}
+  \par\smallskip
+  {\footnotesize (c) \code{inca\_844.jpg}}
+\end{minipage}
+\caption{Plans processed correctly end to end: correctly classified as
+aggregations and extracted into structurally valid graphs that match the source
+drawing node-for-node (apartments in blue, staircases in red, elevators in
+orange). These are the plans judged \emph{fully correct} in the spot-check
+(Section~\ref{sec:exp-spotcheck}).}
+\label{fig:successes}
+\end{figure}
+
 % ============================================================
 \chapter{Discussion \& Limitations}
 \label{ch:discussion}
@@ -856,8 +1198,8 @@ INCASOL corpora, a supervised or fine-tuned approach was not viable, and a promp
 The classification stage reaches an overall accuracy of 90.05\% over the 1,276 manually labelled plans (Section~\ref{sec:exp-classification}), with a weighted $F_1$ of 0.90, indicating reliable separation of the two principal classes. The extraction stage is similarly robust: of the 702 plans (predicted) routed into extraction, the model produced a parseable graph for 691, and 623 of those (90.2\%) pass all hard structural checks with a mean quality score of 0.924
 (Section~\ref{sec:exp-extraction}). Taken together, these results show that a general-purpose VLM, driven only by prompt engineering, can convert the large majority of social-housing plans into well-formed topological graphs.
 
-Beyond the headline accuracy, three design choices proved their value. First, decomposing the extraction into six focused sub-tasks kept each prompt simple and made failures \emph{localisable}---a wrong graph can be traced to the specific step that produced it, rather than to an opaque end-to-end model. Second, the no-fabrication edge rule ensured that the model's uncertainty surfaces as conservative, detectable disconnections rather than as silently invented connections, which is what makes the pipeline's output auditable by the automated checks and routable to human review. Third, the captured-reasoning fields (\code{building\_analysis}, \code{spatial\_analysis}) not only document each extraction for the manual spot-check but, in several cases, exposed an internal
-inconsistency between the model's stated reasoning and its emitted graph---a useful diagnostic signal. Finally, the human-in-the-loop stage demonstrated that a single textual hint, persisted as visual memory, can correct a complex mis-extraction (Section~\ref{sec:exp-hitl}) without retraining the model.
+Beyond the headline accuracy, two further outcomes are worth noting (the engineering choices behind them, and the alternatives they were weighed against, are defended in Section~\ref{sec:design-decisions}). First, the captured-reasoning fields (\code{building\_analysis}, \code{spatial\_analysis}) not only document each extraction for the manual spot-check but, in several cases, exposed an internal inconsistency between the model's stated reasoning and its emitted
+graph---a useful diagnostic signal. Second, the human-in-the-loop stage demonstrated that a single textual hint, persisted as visual memory, can correct a complex mis-extraction (Section~\ref{sec:exp-hitl}) without retraining the model.
 
 \section{Limitations}
 
@@ -882,6 +1224,22 @@ single annotator, so they may contain individual errors and reflect one interpre
 the constraints of this work.
 
 \paragraph{Coordinate imprecision.} Finally, node positions are estimated as percentage coordinates directly from the image, which is inherently imprecise: duplicate or out-of-range coordinates occur on a non-trivial fraction of graphs (Section~\ref{sec:exp-extraction}). This rarely affects the graph topology but degrades the geometric fidelity of the 3D visualisation.
+
+
+\section{Design Decisions and Alternatives}
+\label{sec:design-decisions}
+
+Several core architectural choices shaping this pipeline represent deliberate engineering trade-offs. This section explicitly defends these decisions against their primary alternatives to transparently contextualize the pipeline's capabilities and constraints.
+
+\paragraph{Prompting-only over fine-tuning.} Instead of retraining the Vision-Language Model (VLM) using our human-corrected examples, we chose to keep the model unmodified (``frozen'') and guide it entirely through structured prompting. We rejected fine-tuning for three distinct reasons. First, because our verified dataset is relatively small, fine-tuning risks severe overfitting---essentially teaching the model to memorize a single annotator's biases. Second, training the model on a specific historical archive (e.g., IBAVI) would hard-code those exact drawing conventions into the system, destroying its ability to seamlessly process floor plans from new, unseen archives. Finally, using a frozen model keeps the pipeline transparent. If an error occurs, we can trace it directly back to a flaw in the prompt, rather than trying to decode an opaque, ``black-box'' change in the neural network's weights. The accepted trade-off of this decision is a hard accuracy ceiling: the pipeline can never perform beyond the base model's inherent reasoning capabilities.
+
+\paragraph{Task decomposition over a monolithic query.} While a single end-to-end inference call emitting the entire graph would reduce computational overhead and preserve global context, the pipeline was deliberately decomposed into six bounded sub-tasks (Section~\ref{sec:principles}). This modularity ensures that every failure is strictly localizable---an incorrect room count is isolated as a Step 3 error rather than an opaque, pipeline-wide collapse. The cost is multiplied inference latency and minor fragmentation of cross-task context, which was deemed an acceptable exchange for absolute auditability.
+
+\paragraph{The no-fabrication rule (precision over recall).} When the model is unsure about a connection between rooms, it is strictly forbidden from guessing. While letting the model fabricate plausible links would result in visually complete graphs, we deliberately chose to prioritize precision (absolute correctness) over recall (finding every possible connection). This trade-off is critical for the pipeline's end goal: training a generative AI to design new floor plans. If the model hallucinates a fake connection, it injects an invalid architectural rule directly into the training data. In contrast, a safely omitted edge is a conservative error that can be easily identified and repaired during human review.
+
+\paragraph{Single-image, single-floor processing.} The pipeline currently assumes each image contains only one floor plan. We could have added an automatic pre-processing tool to detect and crop sheets that contain multiple floors, which would fix the overlapping graph errors discussed in Section~\ref{sec:exp-failure}. However, this feature was intentionally deferred. Automatic image segmentation is prone to its own AI errors, and a bad crop at the very beginning of the pipeline would cause a cascade of failures downstream. Importantly, our 3D-alignment module is already designed to stack multiple distinct floor graphs (Section~\ref{sec:3d}). Therefore, requiring one image per floor is merely a temporary constraint on how we feed data into the system, not a fundamental flaw in the methodology itself.
+
+\paragraph{A three-class taxonomy despite a zero-support class.} Because the \textit{other} class contains only one correct instance in this corpus, collapsing Step 1 into a binary scheme was the statistically cleaner alternative. However, the three-class taxonomy is preserved because it is semantically essential for processing broader municipal archives, which frequently contain non-residential layouts (e.g., retail, offices, parking). The cost of this generalizability is an artificially depressed macro-average $F_1$ score on this specific dataset, a statistical artifact made transparent by the weighted averages (Section~\ref{sec:exp-classification}).
 
 % ============================================================
 \chapter{Conclusion \& Future Work}
@@ -1182,9 +1540,9 @@ This appendix documents the visual in-context (few-shot) examples supplied to th
 \section{Classification (two-shot)}
 \label{appendix:ex-classify}
 
-The classification prompt is preceded by two reference plans (Figure \ref{fig:ex-agg}), one per extractable class, each carrying the caption quoted below.
+The classification prompt employs a two-shot strategy, pairing two canonical reference images with textual captions: an \textit{aggregation} plan (featuring a shared central core) and an \textit{individual} layout (a single dwelling). These canonical examples are illustrated in Figure~\ref{fig:ex-classify} and detailed further in Appendix~\ref{appendix:ex-classify}.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \centering
 \begin{minipage}[t]{0.47\textwidth}
   \centering
@@ -1202,10 +1560,10 @@ The classification prompt is preceded by two reference plans (Figure \ref{fig:ex
   apartment: a single dwelling with one kitchen (cuina), one bathroom (bany),
   one living-dining (estar menjador), and two bedrooms (dormitori).''}
 \end{minipage}
-\caption{Two-shot visual examples prepended to the Step~1 classification
-prompt: \code{inca\_05.jpg} (aggregation, left) and \code{inca\_50.jpg}
-(individual, right).}
-\label{fig:ex-classify}
+\caption{Two-shot visual examples prepended to the Step~1 classification prompt:
+\code{inca\_05.jpg} (aggregation, left) and \code{inca\_50.jpg} (individual,
+right).}
+\label{fig:ex-classify-appendix}
 \end{figure}
 
 \section{Aggregation Analysis (one-shot)}
@@ -1215,7 +1573,7 @@ The aggregation prompt receives a single canonical plan (Figure~\ref{fig:ex-agg}
 paired with its expected JSON output, teaching the visual pattern and the
 response schema simultaneously.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.55\textwidth]{figures/examples/inca_05.jpg}
 \caption{One-shot reference image for Step~2, \code{inca\_05.jpg}, paired with
@@ -1269,26 +1627,6 @@ images, each captioned \textit{``Reference image: this is a STAIRCASE / ELEVATOR
 as it appears in these floor plans.''} A plan reviewed before any crop has been
 supplied receives no visual example (zero-shot); the count grows as the
 architect contributes crops over successive sessions.
-
-
-\chapter{Plan Examples}
-\label{appendix:plan-examples}
-
-This appendix shows the 2D extraction visualisations for the two floors used in the multi-floor assembly of Section~\ref{sec:exp-3d}: \textit{ibavi\_34}, the ground floor (\textit{planta baixa}), and \textit{ibavi\_35}, the first floor (\textit{planta primera}) of the same building. The two floors share an identical apartment layout--- ten units in a row served by a single staircase---which is what allows them to be stacked into a coherent multi-floor graph. Each figure places the original floor plan beside its 2D graph.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/examples/ibavi_34_aggregation.png}
-    \caption{\textit{ibavi\_34} (ground floor / \textit{planta baixa}): the original plan and its 2D graph of ten apartments in a row served by a single staircase.}
-    \label{fig:ibavi_34}
-\end{figure}
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/examples/ibavi_35_aggregation.png}
-    \caption{\textit{ibavi\_35} (first floor / \textit{planta primera}): the same building's first floor, with an apartment layout identical to Figure~\ref{fig:ibavi_34}.}
-    \label{fig:ibavi_35}
-\end{figure}
 
 
 % ============================================================
@@ -2074,6 +2412,174 @@ $\mathrm{id}_{3D} = f \times 10^{6} + \mathrm{id}_{2D}$, so the floor index is r
   "flags": []
 }
 \end{lstlisting}
+
+
+\chapter{Incorrect Room Inventory Example}
+\label{appendix:incorrect_room}
+
+This appendix presents an excerpt of the finalized \textit{JSON} artifact generated for the architectural sheet \texttt{ibavi\_33.jpg}. As discussed in the qualitative manual review, this graph demonstrates a compounded extraction failure at both the macro and micro topological levels. 
+
+In the \texttt{building\_analysis} field, the model hallucinates the presence of ``8 apartments'' due to the misinterpretation of thick structural partition walls. Furthermore, within the internal node \texttt{details} for Apartment H, the model incorrectly populates the room inventory, registering \texttt{"num\_bedrooms": 2} despite the original raster image depicting only a single bedroom.
+
+\begin{lstlisting}[style=prompt]
+{
+  "source_file": "ibavi_33.jpg",
+  "dataset": "IBAVI",
+  "type": "aggregation",
+  "building_analysis": "Central core with two staircases and one elevator serving 8 apartments arranged in a 2x4 grid around the circulation space.",
+  "nodes": [
+    {
+      "node_id": 0,
+      "type": "apartment",
+      "label": "H",
+      "position": [
+        20.0,
+        20.0
+      ],
+      "details": {
+        "num_bedrooms": 2,
+        "num_bathrooms": 1,
+        "num_kitchens": 1,
+        "num_living_rooms": 1,
+        "num_terraces": 1,
+        "has_corridor": false,
+        "total_rooms": 5,
+        "room_labels": [
+          "H",
+          "H1",
+          "EMC",
+          "B",
+          "Te"
+        ],
+        "spatial_analysis": "Apartment H is located in the upper-left quadrant, bounded by the central corridor to the south and the building wall to the west and north."
+      }
+    },
+    // ... remaining nodes omitted for brevity ...
+\end{lstlisting}
+
+
+\chapter{Additional Classification-Error Examples}
+\label{appendix:misclassified-extra}
+
+This appendix complements the single per-direction examples of
+Figure~\ref{fig:misclassified} with a broader gallery of Step~1
+misclassifications, showing several plans for each off-diagonal direction of
+the confusion matrix (Table~\ref{tab:confusion}). The empty direction
+\textit{aggregation} $\rightarrow$ \textit{other} is omitted, as no
+aggregation plan in the corpus was predicted as \textit{other}.
+
+\section{Individual predicted as Aggregation}
+\label{appendix:misclassified-ind-agg}
+
+The dominant error mode (78 plans). These are predominantly typology
+catalogues: archival sheets presenting several distinct unit types
+side-by-side, which the model reads as a single multi-unit floor.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/ibavi_17.jpg}
+  \par\smallskip
+  {\footnotesize (a) \code{ibavi\_17.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_02.jpg}
+  \par\smallskip
+  {\footnotesize (b) \code{IMP\_02.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_05.jpg}
+  \par\smallskip
+  {\footnotesize (c) \code{IMP\_05.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_09.jpg}
+  \par\smallskip
+  {\footnotesize (d) \code{IMP\_09.jpg}}
+\end{minipage}
+\caption{\textit{individual} $\rightarrow$ \textit{aggregation}: typology
+catalogues and multi-type sheets read as multi-unit building floors.}
+\label{fig:misclassified-ind-agg}
+\end{figure}
+
+\section{Aggregation predicted as Individual}
+\label{appendix:misclassified-agg-ind}
+
+The reverse error (41 plans): genuine aggregation floors whose shared
+circulation core is faint, low-contrast, or label-sparse, so the model reads
+them as a single dwelling.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_155.jpg}
+  \par\smallskip
+  {\footnotesize (a) \code{IMP\_155.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_188.jpg}
+  \par\smallskip
+  {\footnotesize (b) \code{IMP\_188.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_158.jpg}
+  \par\smallskip
+  {\footnotesize (c) \code{inca\_158.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_311.jpg}
+  \par\smallskip
+  {\footnotesize (d) \code{inca\_311.jpg}}
+\end{minipage}
+\caption{\textit{aggregation} $\rightarrow$ \textit{individual}: multi-unit
+floors whose shared vertical-circulation core is visually illegible.}
+\label{fig:misclassified-agg-ind}
+\end{figure}
+
+\section{Individual predicted as Other}
+\label{appendix:misclassified-ind-other}
+
+A rare error (7 plans): single dwellings whose habitable rooms the model
+fails to recognise, classifying them as non-dwelling \textit{other} drawings.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_301.jpg}
+  \par\smallskip
+  {\footnotesize (a) \code{IMP\_301.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/IMP_274.jpg}
+  \par\smallskip
+  {\footnotesize (b) \code{IMP\_274.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_124.jpg}
+  \par\smallskip
+  {\footnotesize (c) \code{inca\_124.jpg}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.24\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/examples/inca_586.jpg}
+  \par\smallskip
+  {\footnotesize (d) \code{inca\_586.jpg}}
+\end{minipage}
+\caption{\textit{individual} $\rightarrow$ \textit{other}: single dwellings
+mistaken for non-habitable drawings.}
+\label{fig:misclassified-ind-other}
+\end{figure}
 
 \end{appendices}
 

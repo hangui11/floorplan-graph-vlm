@@ -12,17 +12,24 @@ Extracts structured topological graphs from floor plan images using **Qwen3-VL-8
                                                       │
                                                       ▼
                                          [4] Automated validation
+                                          (reports + flags; does NOT gate)
                                                       │
-                              needs review? ◀─────────┤
-                                   │                  │
-                                   ▼                  │
-                    [5] Human-in-the-loop review (hints) ───┤
-                                   │                  │
-                          re-run [4] + [6]            ▼
-                          via --revalidate ─▶ [6] Stack 2D → 3D (N floors)
+                                                      ▼
+                                         [6] Stack 2D → 3D (N floors)  ── every graph
+
+  Optional side-loop (run manually with --review):
+      [4] flags graphs (missing/unreachable connector)
+              │
+              ▼
+      [5] Human-in-the-loop review (hints) ─▶ corrected 2D graph
+              │
+              ▼
+      re-run [4] + [6] via --revalidate
 ```
 
 Step 1 is **three-class**: `aggregation` / `individual` / `other`. Only `aggregation` plans are extracted; `individual` and `other` (offices, lobbies, parking, pure-circulation floors — no kitchen/bathroom) are logged and skipped.
+
+**Step 4 validates and reports but does not gate the pipeline:** every parseable graph proceeds to Step 6 (3D stacking) regardless of pass/fail. Step 5 (human-in-the-loop) is an *optional, non-blocking* side-loop, run manually with `--review`, that only touches the graphs Step 4 flags for missing/unreachable vertical circulation.
 
 - **Nodes** in the 2D graph: apartments (at their principal entrance door), staircases, elevators
 - **Edges** in the 2D graph: physical access between apartments and shared circulation
