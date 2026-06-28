@@ -1113,49 +1113,19 @@ its input because validation never removes a graph from the pipeline.}
 \label{tab:stepfunnel}
 \end{table}
 
-\paragraph{End-to-end success rate.} Re-expressing this cascade as a quality
-rate over the plans the system is \emph{meant} to handle---the 665 true
-aggregations---the two automated gates compose multiplicatively: a 93.8\,\%
-classification recall (Section~\ref{sec:exp-classification}) followed by a
-90.2\,\% structural pass rate (Section~\ref{sec:exp-extraction}) yields an
-estimated \textbf{84.6\,\%} ($0.938 \times 0.902$) of true aggregation plans
-turned into a well-formed graph. This is a \emph{conservative} estimate: the
-90.2\,\% is measured over all 691 predicted-aggregation graphs and is therefore
-diluted by misclassified non-aggregations that fail validation by construction,
-so the true aggregations alone plausibly pass at a higher rate.
+\paragraph{End-to-End Success Rate.} Re-expressing this cascade as a quality rate over the plans the system is \emph{meant} to handle---the 665 true aggregations---the two automated gates compose multiplicatively: a 93.8\% classification recall (Section~\ref{sec:exp-classification}) followed by a 90.2\% structural pass rate (Section~\ref{sec:exp-extraction}) yields an
+estimated \textbf{84.6\%} ($0.938 \times 0.902$) of true aggregation plans turned into a well-formed graph (structurally). This is a \emph{conservative} estimate: the 90.2\% is measured over all 691 predicted-aggregation graphs and is therefore diluted by misclassified non-aggregations that fail validation by construction, so the true aggregations alone plausibly pass at a higher rate.
 
-\paragraph{Structural versus semantic success.} The 84.6\,\% figure measures
-\emph{structural} correctness: the graph is well-formed and passes every hard
-check. It does not guarantee that every apartment was counted exactly, which is
-the stricter bar of the manual spot-check (Section~\ref{sec:exp-spotcheck}),
-where only a minority of graphs were judged a perfect node-for-node match. The
-two numbers are complementary: the pipeline reliably produces \emph{usable,
-well-formed} graphs for the large majority of the plans it is meant to handle,
-while exact node-level fidelity on dense or legend-driven layouts remains the
-principal open challenge and the main target of the human-in-the-loop stage.
+\paragraph{Structural versus Semantic Success.} The 84.6\,\% figure measures \emph{structural} correctness: the graph is well-formed and passes every hard check. It does not guarantee that every apartment was counted exactly, which is the stricter bar of the manual spot-check (Section~\ref{sec:exp-spotcheck}), where only a minority of graphs were judged a perfect node-for-node match. The two numbers are complementary: the pipeline reliably produces \emph{usable, well-formed} graphs for the large majority of the plans it is meant to handle, while exact node-level fidelity on dense or legend-driven layouts remains the principal open challenge and the main target of the human-in-the-loop stage.
 
-Crucially, the structural rate (84.6\,\%) and the semantic rate are measured at
-\emph{different stages, on different sets of graphs}. The automated validation
-(Step~4) runs first over all extracted graphs and gives the structural figure;
-the semantic spot-check (Section~\ref{sec:exp-spotcheck}) runs afterwards on a
-random sample of 30 graphs drawn only from those that \emph{passed} that
-validation. The two are therefore not competing estimates of the same quantity
-but successive, stricter filters. Combining them gives the realistic end-to-end
-picture: of every 100 true aggregation plans entering the pipeline, roughly 85
-yield a structurally valid graph, and of those, the spot-check suggests only
-about one in nine is additionally a flawless node-for-node match---so on the
-order of \textbf{10\,\%} are correct in the strict semantic sense, while the
-large remainder are structurally sound graphs needing only minor node-count
-corrections. This strict figure is a lower bound, set by a deliberately
-unforgiving criterion in which a single miscounted apartment fails an entire
-graph.
+Crucially, the structural success rate (84.6\%) and the semantic success rate are not competing estimates; they are successive filters applied at different stages of the pipeline:
+\begin{itemize}
+    \item \textbf{Filter 1: Structural Validation (Automated).} Step~4 evaluates \emph{all} extracted graphs. It shows that out of every 100 true aggregation plans, roughly 85 yield a syntactically valid, fully connected graph. 
+    \item \textbf{Filter 2: Semantic Validation (Manual).} We then took a random sample of 30 graphs drawn \emph{only} from the group that passed Filter 1. As detailed in Section~\ref{sec:exp-spotcheck}, only about 1 in 9 of these structurally valid graphs proved to be a flawless, node-for-node match with the original drawing.
+\end{itemize}
+Combining these two filters gives us the realistic end-to-end picture: roughly \textbf{10\,\%} of all incoming plans are extracted with absolute, strict perfection. This 10\,\% is a deliberate lower bound, set by an unforgiving grading criterion where a single miscounted apartment fails the entire graph. However, this does not mean the remaining 90\,\% are useless; the vast majority are structurally sound graphs that simply require minor node-count corrections.
 
-\paragraph{Successful end-to-end extractions.} To balance the error-focused
-figures of the previous sections, Figure~\ref{fig:successes} shows three plans
-that traverse the entire pipeline without error: each is correctly classified
-as an aggregation, every apartment and circulation core is recovered, and the
-resulting graph is both structurally valid and a faithful node-for-node match
-to the drawing. These are the spot-check plans judged \emph{fully correct}
+\paragraph{Successful End-to-End Extractions.} To balance the error-focused figures of the previous sections, Figure~\ref{fig:successes} shows three plans that traverse the entire pipeline without error: each is correctly classified as an aggregation, every apartment and circulation core is recovered, and the resulting graph is both structurally valid and a faithful node-for-node match to the drawing. These are the spot-check plans judged \emph{fully correct}
 (Section~\ref{sec:exp-spotcheck}).
 
 \begin{figure}[H]
@@ -1206,24 +1176,24 @@ graph---a useful diagnostic signal. Second, the human-in-the-loop stage demonstr
 Despite these results, the approach has several limitations that bound the
 strength of its conclusions.
 
-\paragraph{Classification is the dominant bottleneck.} The most consequential
+\paragraph{Classification is the Dominant Bottleneck.} The most consequential
 limitation is upstream of extraction: typology catalogues---sheets that present several unit \emph{types} side by side---are frequently misclassified as aggregation plans (Section~\ref{sec:exp-classification}), and multi-floor sheets that place two plans on one image are collapsed into a single graph. Because a plan wrongly admitted into extraction can never yield a correct graph, these
 classification errors propagate downstream and account for most of the empty graphs and most of the human-review queue. This is a limitation of the single-image, single-floor assumption and of the classifier's difficulty in distinguishing a building floor from a catalogue of types.
 
-\paragraph{The \textit{other} class is effectively unused.} Although the three-class scheme is conceptually necessary, the corpus contains only a single non-dwelling plan (Section~\ref{sec:exp-classification}). The \textit{other} category was therefore exercised too rarely to be evaluated meaningfully, and in practice the problem reduces to a near-binary one on this data. Correct non-residential plans are essentially absent from these social-housing archives.
+\paragraph{The \textit{other} Class is Effectively Unused.} Although the three-class scheme is conceptually necessary, the corpus contains only a single non-dwelling plan (Section~\ref{sec:exp-classification}). The \textit{other} category was therefore exercised too rarely to be evaluated meaningfully, and in practice the problem reduces to a near-binary one on this data. Correct non-residential plans are essentially absent from these social-housing archives.
 
-\paragraph{Exact node-level fidelity remains imperfect.} On true aggregation plans, the model reliably produces \emph{well-formed} graphs but not always \emph{exact} ones: the spot-check (Section~\ref{sec:exp-spotcheck}) found apartment over- and under-counting to be the dominant residual error, especially on dense, radial, or legend-driven layouts where the model conflates per-type
+\paragraph{Exact Node-Level Fidelity remains Imperfect.} On true aggregation plans, the model reliably produces \emph{well-formed} graphs but not always \emph{exact} ones: the spot-check (Section~\ref{sec:exp-spotcheck}) found apartment over- and under-counting to be the dominant residual error, especially on dense, radial, or legend-driven layouts where the model conflates per-type
 unit totals with the number of drawn apartments. Vertical circulation is also occasionally misread, with elevators hallucinated or missed.
 
-\paragraph{Validation relies on limited ground truth.} The absence of
+\paragraph{Validation relies on Limited Ground Truth.} The absence of
 annotations shapes not only the method but also its evaluation. Classification could be assessed exactly because the full corpus was hand-labelled, but extraction quality rests on a manual spot-check of roughly thirty plans by a single annotator; the resulting figures are an approximate lower bound rather than a corpus-wide measure, and they carry no inter-annotator agreement. Moreover, the ground-truth labels themselves are not infallible: both the exhaustive classification labelling and the spot-check were carried out by a
 single annotator, so they may contain individual errors and reflect one interpreter's judgement on specific ambiguous cases---for example, plans on the boundary between a typology catalogue and a true aggregation, or sheets that combine a building floor with a unit-type detail. Without a second independent annotator these borderline decisions cannot be cross-validated, and a small number of labelling errors may therefore propagate into the reported metrics. The demonstrations of human-in-the-loop refinement and multi-floor 3D assembly are likewise based on individual examples rather than a large-scale study, so the generalisation of the persistent-memory mechanism across the dataset remains untested.
 
 
-\paragraph{Constrained hardware and model scale.} The pipeline is bounded by the available hardware: the production model is the 8B variant on a single 24GB GPU, and the larger 30B Mixture-of-Experts variant could not be deployed (Section~\ref{sec:model_selection}). Some of the counting and disambiguation errors above are plausibly attributable to model scale, and a larger or reasoning-tuned model might reduce them---but this could not be verified within
+\paragraph{Constrained Hardware and Model Scale.} The pipeline is bounded by the available hardware: the production model is the 8B variant on a single 24GB GPU, and the larger 30B Mixture-of-Experts variant could not be deployed (Section~\ref{sec:model_selection}). Some of the counting and disambiguation errors above are plausibly attributable to model scale, and a larger or reasoning-tuned model might reduce them---but this could not be verified within
 the constraints of this work.
 
-\paragraph{Coordinate imprecision.} Finally, node positions are estimated as percentage coordinates directly from the image, which is inherently imprecise: duplicate or out-of-range coordinates occur on a non-trivial fraction of graphs (Section~\ref{sec:exp-extraction}). This rarely affects the graph topology but degrades the geometric fidelity of the 3D visualisation.
+\paragraph{Coordinate Imprecision.} Finally, node positions are estimated as percentage coordinates directly from the image, which is inherently imprecise: duplicate or out-of-range coordinates occur on a non-trivial fraction of graphs (Section~\ref{sec:exp-extraction}). This rarely affects the graph topology but degrades the geometric fidelity of the 3D visualisation.
 
 
 \section{Design Decisions and Alternatives}
@@ -1231,15 +1201,15 @@ the constraints of this work.
 
 Several core architectural choices shaping this pipeline represent deliberate engineering trade-offs. This section explicitly defends these decisions against their primary alternatives to transparently contextualize the pipeline's capabilities and constraints.
 
-\paragraph{Prompting-only over fine-tuning.} Instead of retraining the Vision-Language Model (VLM) using our human-corrected examples, we chose to keep the model unmodified (``frozen'') and guide it entirely through structured prompting. We rejected fine-tuning for three distinct reasons. First, because our verified dataset is relatively small, fine-tuning risks severe overfitting---essentially teaching the model to memorize a single annotator's biases. Second, training the model on a specific historical archive (e.g., IBAVI) would hard-code those exact drawing conventions into the system, destroying its ability to seamlessly process floor plans from new, unseen archives. Finally, using a frozen model keeps the pipeline transparent. If an error occurs, we can trace it directly back to a flaw in the prompt, rather than trying to decode an opaque, ``black-box'' change in the neural network's weights. The accepted trade-off of this decision is a hard accuracy ceiling: the pipeline can never perform beyond the base model's inherent reasoning capabilities.
+\paragraph{Prompting-Only over Fine-Tuning.} Instead of retraining the Vision-Language Model (VLM) using our human-corrected examples, we chose to keep the model unmodified (``frozen'') and guide it entirely through structured prompting. We rejected fine-tuning for three distinct reasons. First, because our verified dataset is relatively small, fine-tuning risks severe overfitting---essentially teaching the model to memorize a single annotator's biases. Second, training the model on a specific historical archive (e.g., IBAVI) would hard-code those exact drawing conventions into the system, destroying its ability to seamlessly process floor plans from new, unseen archives. Finally, using a frozen model keeps the pipeline transparent. If an error occurs, we can trace it directly back to a flaw in the prompt, rather than trying to decode an opaque, ``black-box'' change in the neural network's weights. The accepted trade-off of this decision is a hard accuracy ceiling: the pipeline can never perform beyond the base model's inherent reasoning capabilities.
 
-\paragraph{Task decomposition over a monolithic query.} While a single end-to-end inference call emitting the entire graph would reduce computational overhead and preserve global context, the pipeline was deliberately decomposed into six bounded sub-tasks (Section~\ref{sec:principles}). This modularity ensures that every failure is strictly localizable---an incorrect room count is isolated as a Step 3 error rather than an opaque, pipeline-wide collapse. The cost is multiplied inference latency and minor fragmentation of cross-task context, which was deemed an acceptable exchange for absolute auditability.
+\paragraph{Task Decomposition over a Monolithic Query.} While a single end-to-end inference call emitting the entire graph would reduce computational overhead and preserve global context, the pipeline was deliberately decomposed into six bounded sub-tasks (Section~\ref{sec:principles}). This modularity ensures that every failure is strictly localizable---an incorrect room count is isolated as a Step 3 error rather than an opaque, pipeline-wide collapse. The cost is multiplied inference latency and minor fragmentation of cross-task context, which was deemed an acceptable exchange for absolute auditability.
 
-\paragraph{The no-fabrication rule (precision over recall).} When the model is unsure about a connection between rooms, it is strictly forbidden from guessing. While letting the model fabricate plausible links would result in visually complete graphs, we deliberately chose to prioritize precision (absolute correctness) over recall (finding every possible connection). This trade-off is critical for the pipeline's end goal: training a generative AI to design new floor plans. If the model hallucinates a fake connection, it injects an invalid architectural rule directly into the training data. In contrast, a safely omitted edge is a conservative error that can be easily identified and repaired during human review.
+\paragraph{The No-Fabrication Rule (precision over recall).} When the model is unsure about a connection between rooms, it is strictly forbidden from guessing. While letting the model fabricate plausible links would result in visually complete graphs, we deliberately chose to prioritize precision (absolute correctness) over recall (finding every possible connection). This trade-off is critical for the pipeline's end goal: training a generative AI to design new floor plans. If the model hallucinates a fake connection, it injects an invalid architectural rule directly into the training data. In contrast, a safely omitted edge is a conservative error that can be easily identified and repaired during human review.
 
-\paragraph{Single-image, single-floor processing.} The pipeline currently assumes each image contains only one floor plan. We could have added an automatic pre-processing tool to detect and crop sheets that contain multiple floors, which would fix the overlapping graph errors discussed in Section~\ref{sec:exp-failure}. However, this feature was intentionally deferred. Automatic image segmentation is prone to its own AI errors, and a bad crop at the very beginning of the pipeline would cause a cascade of failures downstream. Importantly, our 3D-alignment module is already designed to stack multiple distinct floor graphs (Section~\ref{sec:3d}). Therefore, requiring one image per floor is merely a temporary constraint on how we feed data into the system, not a fundamental flaw in the methodology itself.
+\paragraph{Single-Image, Single-Floor Processing.} The pipeline currently assumes each image contains only one floor plan. We could have added an automatic pre-processing tool to detect and crop sheets that contain multiple floors, which would fix the overlapping graph errors discussed in Section~\ref{sec:exp-failure}. However, this feature was intentionally deferred. Automatic image segmentation is prone to its own AI errors, and a bad crop at the very beginning of the pipeline would cause a cascade of failures downstream. Importantly, our 3D-alignment module is already designed to stack multiple distinct floor graphs (Section~\ref{sec:3d}). Therefore, requiring one image per floor is merely a temporary constraint on how we feed data into the system, not a fundamental flaw in the methodology itself.
 
-\paragraph{A three-class taxonomy despite a zero-support class.} Because the \textit{other} class contains only one correct instance in this corpus, collapsing Step 1 into a binary scheme was the statistically cleaner alternative. However, the three-class taxonomy is preserved because it is semantically essential for processing broader municipal archives, which frequently contain non-residential layouts (e.g., retail, offices, parking). The cost of this generalizability is an artificially depressed macro-average $F_1$ score on this specific dataset, a statistical artifact made transparent by the weighted averages (Section~\ref{sec:exp-classification}).
+\paragraph{A Three-Class Taxonomy despite a Zero-Support Class.} Because the \textit{other} class contains only one correct instance in this corpus, collapsing Step 1 into a binary scheme was the statistically cleaner alternative. However, the three-class taxonomy is preserved because it is semantically essential for processing broader municipal archives, which frequently contain non-residential layouts (e.g., retail, offices, parking). The cost of this generalizability is an artificially depressed macro-average $F_1$ score on this specific dataset, a statistical artifact made transparent by the weighted averages (Section~\ref{sec:exp-classification}).
 
 % ============================================================
 \chapter{Conclusion \& Future Work}
@@ -1250,16 +1220,16 @@ Several core architectural choices shaping this pipeline represent deliberate en
 This thesis set out to convert a corpus of unannotated Catalan social-housing floor plans into structured topological graphs, as the foundational data for future generative models of residential layout. In the absence of any ground truth---which rules out supervised training and fine-tuning---it pursued an annotation-free route built entirely on prompting a frozen Vision-Language Model. The work makes the following contributions.
 
 \begin{itemize}
-    \item \textbf{An annotation-free, prompting-only extraction pipeline.} A complete six-stage system was designed and implemented that takes a raster floor plan and produces a 2D access graph and a stacked 3D building graph,
+    \item \textbf{An Annotation-Free, Prompting-Only Extraction Pipeline.} A complete six-stage system was designed and implemented that takes a raster floor plan and produces a 2D access graph and a stacked 3D building graph,
     using a frozen \textbf{Qwen3-VL-8B-Instruct} model with no fine-tuning and no labelled training data. On the 1{,}276-plan corpus it classifies plans with 90.05\% accuracy and produces structurally valid graphs for the large majority of aggregation plans (90.2\% pass rate).
 
-    \item \textbf{A decomposed, hybrid extraction methodology.} Rather than relying on a single monolithic Vision-Language Model (VLM) query, the pipeline is modularized into distinct sub-tasks. The inference-driven stages (classification, aggregation analysis, apartment detailing, and interactive review) are each governed by specialized prompts combining an expert architectural persona, explicit decision procedures, and visual in-context examples. Conversely, the validation strategy and structural stages (2D graph assembly and 3D alignment) are executed via strictly deterministic, prompt-free algorithms. This hybrid decomposition ensures that each VLM task remains computationally tractable and makes any extraction failures precisely attributable to a specific pipeline stage.
+    \item \textbf{A Decomposed, Hybrid Extraction Methodology.} Rather than relying on a single monolithic Vision-Language Model (VLM) query, the pipeline is modularized into distinct sub-tasks. The inference-driven stages (classification, aggregation analysis, apartment detailing, and interactive review) are each governed by specialized prompts combining an expert architectural persona, explicit decision procedures, and visual in-context examples. Conversely, the validation strategy and structural stages (2D graph assembly and 3D alignment) are executed via strictly deterministic, prompt-free algorithms. This hybrid decomposition ensures that each VLM task remains computationally tractable and makes any extraction failures precisely attributable to a specific pipeline stage.
 
-    \item \textbf{Design principles for trustworthy extraction.} Two choices in particular proved their value: the \emph{no-fabrication edge rule}, which makes the model's uncertainty surface as conservative, detectable disconnections rather than as silently invented connections; and the \emph{captured-reasoning fields}, which both document each extraction and expose inconsistencies between the model's stated reasoning and its emitted graph. Together they make the pipeline's output auditable.
+    \item \textbf{Design Principles for Trustworthy Extraction.} Two choices in particular proved their value: the \emph{no-fabrication edge rule}, which makes the model's uncertainty surface as conservative, detectable disconnections rather than as silently invented connections; and the \emph{captured-reasoning fields}, which both document each extraction and expose inconsistencies between the model's stated reasoning and its emitted graph. Together they make the pipeline's output auditable.
 
-    \item \textbf{A human-in-the-loop refinement with persistent visual memory.} An interactive stage allows an architect to correct a mis-extraction with a textual hint and reference crops that are persisted across sessions as few-shot examples, adapting the model's behaviour without any weight update.
+    \item \textbf{A Human-in-the-Loop Refinement with Persistent Visual Memory.} An interactive stage allows an architect to correct a mis-extraction with a textual hint and reference crops that are persisted across sessions as few-shot examples, adapting the model's behaviour without any weight update.
 
-    \item \textbf{An annotation-free validation strategy and an empirical study.} Lacking ground truth, the pipeline is evaluated through deterministic structural checks over the full corpus and a manual spot-check against the source images, complemented by an exhaustive manual classification labelling of all 1,276 plans. This yields the first quantitative characterisation of
+    \item \textbf{An Annotation-Free Validation Strategy and an empirical study.} Lacking ground truth, the pipeline is evaluated through deterministic structural checks over the full corpus and a manual spot-check against the source images, complemented by an exhaustive manual classification labelling of all 1,276 plans. This yields the first quantitative characterisation of
     how a prompting-only VLM performs on this domain, including a clear analysis of its failure modes.
 \end{itemize}
 
